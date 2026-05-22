@@ -14,32 +14,20 @@ export default function DashboardLayout({
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [officeName, setOfficeName] = useState('ObraSnap')
 
   useEffect(() => {
-    const init = async () => {
+    const checkAuth = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         router.push('/login')
-        return
+      } else {
+        setLoading(false)
       }
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('office_name')
-        .eq('id', user.id)
-        .single()
-
-      if (userData?.office_name) {
-        setOfficeName(userData.office_name)
-      }
-
-      setLoading(false)
     }
 
-    init()
+    checkAuth()
   }, [router])
 
   if (loading) {
@@ -55,9 +43,6 @@ export default function DashboardLayout({
       <Sidebar />
       <main className="lg:ml-72 min-h-screen">
         <header className="flex justify-between items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-40 bg-surface-container-low">
-          <div className="flex items-center gap-4 lg:gap-8">
-            <span className="text-xl lg:text-2xl font-bold tracking-tighter text-on-background hidden lg:block">{officeName}</span>
-          </div>
           <div className="flex items-center gap-3 lg:gap-6">
             <div className="relative hidden md:flex items-center bg-surface-container rounded-full px-4 py-2 w-48 lg:w-64">
               <Search className="text-outline w-5 h-5" />
