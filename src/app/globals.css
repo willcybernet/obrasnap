@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.45rem;
+
+    /* Light Theme - Stone & Emerald */
+    --background: #fafaf9; /* stone-50 */
+    --foreground: #1c1917; /* stone-900 */
+
+    --card: #ffffff;
+    --card-foreground: #1c1917;
+
+    --popover: #ffffff;
+    --popover-foreground: #1c1917;
+
+    --primary: #059669; /* emerald-600 */
+    --primary-foreground: #f0fdf4; /* emerald-50 */
+
+    --secondary: #f5f5f4; /* stone-100 */
+    --secondary-foreground: #1c1917;
+
+    --muted: #f5f5f4;
+    --muted-foreground: #78716c; /* stone-500 */
+
+    --accent: #f5f5f4;
+    --accent-foreground: #1c1917;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+
+    --success: #22c55e;
+    --success-foreground: #fafafa;
+
+    --warning: #f59e0b;
+    --warning-foreground: #fafafa;
+
+    --border: #e7e5e4; /* stone-200 */
+    --input: #e7e5e4;
+    --ring: #059669;
+
+    --chart-1: #059669;
+    --chart-2: #2dd4bf;
+    --chart-3: #a78bfa;
+    --chart-4: #fb7185;
+    --chart-5: #facc15;
+  }
+
+  .dark {
+    --background: #1c1917;
+    --foreground: #fafaf9;
+
+    --card: #292524; /* stone-800 */
+    --card-foreground: #fafaf9;
+
+    --popover: #292524;
+    --popover-foreground: #fafaf9;
+
+    --primary: #34d399; /* emerald-400 */
+    --primary-foreground: #022c22; /* emerald-950 */
+
+    --secondary: #292524;
+    --secondary-foreground: #fafaf9;
+
+    --muted: #292524;
+    --muted-foreground: #a8a29e; /* stone-400 */
+
+    --accent: #292524;
+    --accent-foreground: #fafaf9;
+
+    --destructive: #7f1d1d;
+    --destructive-foreground: #fafafa;
+
+    --success: #22c55e;
+    --success-foreground: #fafafa;
+
+    --warning: #78350f;
+    --warning-foreground: #fafafa;
+
+    --border: #44403c; /* stone-700 */
+    --input: #44403c;
+    --ring: #34d399;
+
+    --chart-1: #34d399;
+    --chart-2: #2dd4bf;
+    --chart-3: #a78bfa;
+    --chart-4: #fb7185;
+    --chart-5: #facc15;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-transparent;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-xl bg-surface-container-low/80;
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}

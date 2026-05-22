@@ -1,0 +1,108 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { 
+  Building2, 
+  Users, 
+  Package, 
+  BarChart3, 
+  Settings,
+  Plus,
+  LogOut,
+  Menu,
+  X
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase'
+
+const navItems = [
+  { icon: Building2, label: 'Projetos', href: '/dashboard' },
+  { icon: Users, label: 'Equipe', href: '/dashboard/team' },
+  { icon: Package, label: 'Inventário', href: '/dashboard/inventory' },
+  { icon: BarChart3, label: 'Relatórios', href: '/dashboard/reports' },
+  { icon: Settings, label: 'Configurações', href: '/dashboard/settings' },
+]
+
+export function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  return (
+    <>
+      <button 
+        onClick={() => setIsOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-lg lg:hidden"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-full flex flex-col p-8 z-50 w-72 transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#F4F4F4' }}>
+        <div className="flex items-center justify-between mb-12">
+          <div>
+            <h1 className="font-headline font-black text-xl tracking-tighter text-on-background">Atelier</h1>
+            <p className="font-label uppercase tracking-widest text-[11px] text-outline">OBRASNAP</p>
+          </div>
+          <button onClick={() => setIsOpen(false)} className="lg:hidden">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-2">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || 
+              (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-4 px-4 py-3 transition-all duration-200 opacity-90 hover:opacity-100 ${
+                  isActive
+                    ? 'bg-surface-container-low text-on-background font-bold'
+                    : 'text-primary hover:bg-surface-container-low'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-label uppercase tracking-widest text-[11px]">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="mt-auto space-y-4">
+          <Link href="/dashboard/new" onClick={() => setIsOpen(false)}>
+            <Button className="w-full bg-primary text-primary-foreground py-4 px-6 rounded-md font-bold text-[12px] tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary-dim transition-colors">
+              <Plus className="w-[18px] h-[18px]" />
+              Novo Projeto
+            </Button>
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 px-4 py-3 text-outline hover:text-on-background transition-all duration-200 opacity-90 hover:opacity-100"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-label uppercase tracking-widest text-[11px]">Sair</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  )
+}

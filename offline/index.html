@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ObraSnap - Acompanhe sua obra em tempo real</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container header-content">
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="4" y="12" width="24" height="16" stroke="currentColor" stroke-width="2"/>
+          <path d="M4 12L16 4L28 12" stroke="currentColor" stroke-width="2"/>
+          <rect x="12" y="20" width="8" height="8" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span>ObraSnap</span>
+      </div>
+      <nav class="nav">
+        <a href="#funcionalidades">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="dashboard.html" class="btn btn-secondary">Entrar</a>
+        <a href="dashboard.html" class="btn btn-primary">Começar agora</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-content">
+        <h1>Transparência que constrói <span class="highlight">confiança</span></h1>
+        <p class="hero-subtitle">Plataforma de acompanhamento visual e em tempo real para obras e projetos de arquitetura. Mostre o progresso diário ao seu cliente.</p>
+        <div class="hero-cta">
+          <a href="dashboard.html" class="btn btn-primary btn-large">Começar gratuitamente</a>
+          <a href="#funcionalidades" class="btn btn-tertiary">Ver demonstração</a>
+        </div>
+        <div class="hero-preview">
+          <div class="preview-mockup">
+            <div class="mockup-header">
+              <div class="mockup-dot"></div>
+              <div class="mockup-dot"></div>
+              <div class="mockup-dot"></div>
+            </div>
+            <div class="mockup-content">
+              <div class="progress-card">
+                <div class="progress-header">
+                  <h3>Residencial Vila Madalena</h3>
+                  <span class="progress-percent">65%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 65%"></div>
+                </div>
+                <div class="timeline-preview">
+                  <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <p>Fundação concluída</p>
+                  </div>
+                  <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <p>Estrutura em andamento</p>
+                  </div>
+                  <div class="timeline-item active">
+                    <div class="timeline-dot"></div>
+                    <p>Instalações elétricas</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="funcionalidades" class="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>Como funciona</h2>
+          <p>Simples para você, transparente para seu cliente</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </div>
+            <h3>Crie seu projeto</h3>
+            <p>Defina as etapas, datas e informações da obra em poucos cliques</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <h3>Registre atualizações</h3>
+            <p>Adicione fotos e notas do dia a dia da obra rapidamente</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 01-3.46 0"/>
+              </svg>
+            </div>
+            <h3>Cliente notificado</h3>
+            <p>Seu cliente recebe notificação automática por email a cada atualização</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </div>
+            <h3>Acompanhamento online</h3>
+            <p>Cliente acessa pelo link público e visualiza progresso em tempo real</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="recursos" class="benefits">
+      <div class="container">
+        <div class="benefits-content">
+          <div class="benefits-text">
+            <h2>Mais do que fotos,<br><span class="highlight">relacionamento</span></h2>
+            <ul class="benefits-list">
+              <li>
+                <span class="check">✓</span>
+                <span>Zero perguntas sobre "como está a obra?"</span>
+              </li>
+              <li>
+                <span class="check">✓</span>
+                <span>Cliente mais tranquilo e confiante</span>
+              </li>
+              <li>
+                <span class="check">✓</span>
+                <span>Diferencial competitivo para seu escritório</span>
+              </li>
+              <li>
+                <span class="check">✓</span>
+                <span>Histórico completo da obra em um só lugar</span>
+              </li>
+            </ul>
+          </div>
+          <div class="benefits-visual">
+            <div class="phone-mockup">
+              <div class="phone-screen">
+                <div class="client-header">
+                  <span class="office-name">Arquitetura Silva</span>
+                  <h3>Residencial Vila Madalena</h3>
+                </div>
+                <div class="client-progress">
+                  <div class="progress-ring">
+                    <svg viewBox="0 0 36 36">
+                      <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                      <path class="ring-fill" stroke-dasharray="65, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <span class="ring-percent">65%</span>
+                  </div>
+                  <p>Progresso geral</p>
+                </div>
+                <div class="client-updates">
+                  <div class="update-item">
+                    <div class="update-date">Hoje</div>
+                    <div class="update-content">
+                      <p>Instalações elétricas em andamento na área social</p>
+                      <div class="update-photos">
+                        <div class="photo-thumb"></div>
+                        <div class="photo-thumb"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-box">
+          <h2>Pronto para transformar a experiência do seu cliente?</h2>
+          <p>Comece gratuitamente hoje mesmo. Sem compromisso.</p>
+          <a href="dashboard.html" class="btn btn-primary btn-large">Criar minha conta</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-content">
+      <div class="footer-brand">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="12" width="24" height="16" stroke="currentColor" stroke-width="2"/>
+            <path d="M4 12L16 4L28 12" stroke="currentColor" stroke-width="2"/>
+            <rect x="12" y="20" width="8" height="8" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <span>ObraSnap</span>
+        </div>
+        <p>Transparência que constrói confiança</p>
+      </div>
+      <div class="footer-links">
+        <a href="#">Termos de uso</a>
+        <a href="#">Privacidade</a>
+        <a href="#">Contato</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
