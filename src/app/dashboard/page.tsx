@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, HardHat } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
@@ -13,6 +14,7 @@ interface ProjectWithProgress extends Project {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [projects, setProjects] = useState<ProjectWithProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -82,7 +84,7 @@ export default function DashboardPage() {
     }
 
     fetchProjects()
-  }, [retryCount])
+  }, [retryCount, router])
 
   const activeProjects = projects.filter(p => p.is_active)
   const completedProjects = projects.filter(p => !p.is_active)

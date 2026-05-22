@@ -215,7 +215,7 @@ export async function calculateProgress(projectId: string): Promise<ProjectProgr
     return { total_stages: 0, completed_stages: 0, percentage: 0 }
   }
 
-  const completedStages = stages.filter((s) => s.is_completed).length
+  const completedStages = stages.filter((s: { is_completed: boolean }) => s.is_completed).length
   const totalStages = stages.length
   const percentage = Math.round((completedStages / totalStages) * 100)
 
