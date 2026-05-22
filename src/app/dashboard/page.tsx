@@ -31,7 +31,10 @@ export default function DashboardPage() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (projectsError) throw projectsError
+        if (projectsError) {
+          console.error('Erro ao buscar projetos:', projectsError)
+          throw projectsError
+        }
 
         const projectsWithProgress = (projectsData || []).map((project: any) => {
           const stages = project.stages || []

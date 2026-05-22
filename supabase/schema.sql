@@ -77,6 +77,9 @@ ALTER TABLE public.updates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
 
 -- Policies para Users
+CREATE POLICY "users_insert_own" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "users_select_own" ON public.users
   FOR SELECT USING (auth.uid() = id);
 

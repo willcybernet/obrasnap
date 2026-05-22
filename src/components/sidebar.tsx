@@ -5,9 +5,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
   Building2, 
-  Users, 
-  Package, 
-  BarChart3, 
   Settings,
   Plus,
   LogOut,
@@ -19,9 +16,6 @@ import { createClient } from '@/lib/supabase'
 
 const navItems = [
   { icon: Building2, label: 'Projetos', href: '/dashboard' },
-  { icon: Users, label: 'Equipe', href: '/dashboard/team' },
-  { icon: Package, label: 'Inventário', href: '/dashboard/inventory' },
-  { icon: BarChart3, label: 'Relatórios', href: '/dashboard/reports' },
   { icon: Settings, label: 'Configurações', href: '/dashboard/settings' },
 ]
 
