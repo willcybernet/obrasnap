@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Share2, Check, X, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
 import { sendUpdateNotification } from '@/lib/notifications'
+import type { Photo, Project, Stage, UpdateWithPhotos } from '@/lib/types'
+
+interface ProjectDetails extends Project {
+  stages: Stage[]
+  updates: UpdateWithPhotos[]
+}
 
 export default function ProjectPage() {
   const params = useParams()
@@ -19,10 +25,13 @@ export default function ProjectPage() {
   const [photos, setPhotos] = useState<File[]>([])
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [project, setProject] = useState<ProjectDetails | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const mockProject = {
+  const unusedMockProject = {
     id: '1',
     name: 'Casa Silva',
     address: 'Av. Paulista, 1000 - São Paulo, SP',
@@ -62,10 +71,48 @@ export default function ProjectPage() {
     ],
   }
 
-  const project = mockProject
-  const completedStages = project.stages.filter((s: { is_completed: boolean }) => s.is_completed).length
-  const progress = Math.round((completedStages / project.stages.length) * 100)
-  const incompleteStages = project.stages.filter((s: { is_completed: boolean }) => !s.is_completed)
+  const loadProject = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const supabase = createClient()
+      const { data, error: projectError } = await supabase
+        .from('projects')
+        .select('*, stages(*), updates(*, stage:stages(*), photos(*))')
+        .eq('id', projectId)
+        .single()
+
+      if (projectError) throw projectError
+
+      const orderedStages = [...(data.stages || [])].sort((a: Stage, b: Stage) => a.order_index - b.order_index)
+      const orderedUpdates = [...(data.updates || [])].sort(
+        (a: UpdateWithPhotos, b: UpdateWithPhotos) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      setProject({
+        ...data,
+        stages: orderedStages,
+        updates: orderedUpdates,
+      })
+    } catch (err: any) {
+      console.error('Erro ao carregar projeto:', err)
+      setError(err.message || 'Erro ao carregar projeto')
+    } finally {
+      setLoading(false)
+    }
+  }, [projectId])
+
+  useEffect(() => {
+    loadProject()
+  }, [loadProject])
+
+  const completedStages = project?.stages.filter((s) => s.is_completed).length || 0
+  const progress = project && project.stages.length > 0
+    ? Math.round((completedStages / project.stages.length) * 100)
+    : 0
+  const incompleteStages = project?.stages.filter((s) => !s.is_completed) || []
+  const latestPhoto = project?.updates.flatMap((update) => update.photos || [])[0] as Photo | undefined
 
   const handleStageToggle = (stageId: string) => {
     setSelectedStages(prev => 
@@ -83,59 +130,99 @@ export default function ProjectPage() {
   }
 
   const handleSaveUpdate = async () => {
-    if (selectedStages.length === 0) return
+    if (selectedStages.length === 0 || !project) return
     
     setSaving(true)
-    const supabase = createClient()
+    setError('')
 
-    const { data: update, error } = await supabase
-      .from('updates')
-      .insert({
-        project_id: projectId,
-        stage_id: selectedStages[0],
-        note: note || null,
-      })
-      .select()
-      .single()
+    try {
+      const supabase = createClient()
 
-    if (error) {
-      console.error(error)
-      setSaving(false)
-      return
-    }
-
-    for (const stageId of selectedStages) {
-      await supabase
-        .from('stages')
-        .update({ 
-          is_completed: true, 
-          completed_at: new Date().toISOString() 
+      const { data: update, error } = await supabase
+        .from('updates')
+        .insert({
+          project_id: projectId,
+          stage_id: selectedStages[0],
+          note: note || null,
         })
-        .eq('id', stageId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      for (const stageId of selectedStages) {
+        const { error: stageError } = await supabase
+          .from('stages')
+          .update({ 
+            is_completed: true, 
+            completed_at: new Date().toISOString() 
+          })
+          .eq('id', stageId)
+
+        if (stageError) throw stageError
+      }
+
+      for (const photo of photos) {
+        const fileName = `${update.id}/${Date.now()}-${photo.name}`
+        const storagePath = `${projectId}/${fileName}`
+        
+        const { error: uploadError } = await supabase.storage.from('photos').upload(storagePath, photo)
+        if (uploadError) throw uploadError
+        
+        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
+        
+        const { error: photoError } = await supabase.from('photos').insert({
+          update_id: update.id,
+          storage_path: storagePath,
+          storage_url: urlData.publicUrl,
+        })
+
+        if (photoError) throw photoError
+      }
+
+      await sendUpdateNotification(projectId, update.id)
+
+      setShowRegister(false)
+      setRegisterStep(1)
+      setSelectedStages([])
+      setPhotos([])
+      setNote('')
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao salvar registro:', err)
+      setError(err.message || 'Erro ao salvar registro')
+    } finally {
+      setSaving(false)
     }
-
-    for (const photo of photos) {
-      const fileName = `${update.id}/${Date.now()}-${photo.name}`
-      const storagePath = `photos/${projectId}/${fileName}`
-      
-      await supabase.storage.from('photos').upload(storagePath, photo)
-      
-      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
-      
-      await supabase.from('photos').insert({
-        update_id: update.id,
-        storage_path: storagePath,
-        storage_url: urlData.publicUrl,
-      })
-    }
-
-    await sendUpdateNotification(projectId, update.id)
-
-    window.location.reload()
   }
 
   const copyLink = () => {
+    if (!project?.public_slug) return
     navigator.clipboard.writeText(`${window.location.origin}/obra/${project.public_slug}`)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projeto...</div>
+      </div>
+    )
+  }
+
+  if (error && !project) {
+    return (
+      <div className="p-6 bg-error-container text-on-error-container rounded-lg text-sm">
+        {error}
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="p-6 bg-surface-container-low rounded-lg text-sm text-on-surface-variant">
+        Projeto nÃ£o encontrado.
+      </div>
+    )
   }
 
   return (
@@ -160,12 +247,16 @@ export default function ProjectPage() {
           </div>
 
           <div className="aspect-video w-full rounded-xl overflow-hidden bg-surface-container-low relative">
-            <img 
-              src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1200" 
-              alt="Projeto" 
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6 lg:p-12 -mt-20 lg:-mt-24">
+            {latestPhoto ? (
+              <img 
+                src={latestPhoto.storage_url} 
+                alt="Foto mais recente do projeto" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-surface-container-highest" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6 lg:p-12">
               <span className="text-on-primary/70 text-xs lg:text-sm font-bold tracking-widest mb-1 lg:mb-2">PROJETO ATUAL</span>
               <h3 className="text-on-primary font-headline text-2xl lg:text-4xl font-medium italic">{project.name}</h3>
             </div>
@@ -174,7 +265,13 @@ export default function ProjectPage() {
           <section>
             <h3 className="font-headline text-lg lg:text-xl font-bold text-on-surface mb-4 lg:mb-6">Atualizações Recentes</h3>
             <div className="space-y-4 lg:space-y-6">
-              {mockProject.updates.map((update: any) => (
+              {project.updates.length === 0 && (
+                <div className="bg-surface-container-low rounded-xl p-6 text-sm text-on-surface-variant">
+                  Nenhum registro foi adicionado a este projeto ainda.
+                </div>
+              )}
+
+              {project.updates.map((update) => (
                 <div key={update.id} className="bg-surface-container-low rounded-xl p-4 lg:p-6">
                   <div className="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4">
                     <Camera className="w-4 lg:w-5 h-4 lg:h-5 text-outline" />
