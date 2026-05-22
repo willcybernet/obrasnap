@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Camera, Share2, Check, X, Upload } from 'lucide-react'
+import { ArrowLeft, Camera, Share2, X, Upload, MoreVertical, Edit, Trash2, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase'
 import { sendUpdateNotification } from '@/lib/notifications'
 import type { Photo, Project, Stage, UpdateWithPhotos } from '@/lib/types'
@@ -18,7 +19,7 @@ export default function ProjectPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
-  
+
   const [showRegister, setShowRegister] = useState(false)
   const [registerStep, setRegisterStep] = useState(1)
   const [selectedStages, setSelectedStages] = useState<string[]>([])
@@ -28,48 +29,27 @@ export default function ProjectPage() {
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showActions, setShowActions] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
-  const unusedMockProject = {
-    id: '1',
-    name: 'Casa Silva',
-    address: 'Av. Paulista, 1000 - São Paulo, SP',
-    start_date: '2026-01-15',
-    public_slug: 'casa-silva-abc123',
-    stages: [
-      { id: '1', name: 'Fundação', order: 1, is_completed: true, completed_at: '2026-01-20' },
-      { id: '2', name: 'Estrutura', order: 2, is_completed: true, completed_at: '2026-02-10' },
-      { id: '3', name: 'Alvenaria', order: 3, is_completed: true, completed_at: '2026-03-05' },
-      { id: '4', name: 'Instalações Elétricas', order: 4, is_completed: false, completed_at: null },
-      { id: '5', name: 'Instalações Hidráulicas', order: 5, is_completed: false, completed_at: null },
-      { id: '6', name: 'Pintura', order: 6, is_completed: false, completed_at: null },
-      { id: '7', name: 'Acabamento', order: 7, is_completed: false, completed_at: null },
-    ],
-    updates: [
-      {
-        id: '1',
-        created_at: '2026-03-28',
-        note: 'Quadro elétrico instalado na parede sul',
-        stage: { name: 'Instalações Elétricas' },
-        photos: [
-          { id: '1', storage_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400' },
-          { id: '2', storage_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400' },
-          { id: '3', storage_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400' },
-        ]
-      },
-      {
-        id: '2',
-        created_at: '2026-03-15',
-        note: 'Paredes internas finalizadas',
-        stage: { name: 'Alvenaria' },
-        photos: [
-          { id: '4', storage_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400' },
-          { id: '5', storage_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400' },
-        ]
-      },
-    ],
-  }
+  const [editName, setEditName] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editClientName, setEditClientName] = useState('')
+  const [editClientEmail, setEditClientEmail] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editEndDate, setEditEndDate] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+
+  const [editingUpdate, setEditingUpdate] = useState<string | null>(null)
+  const [editUpdateNote, setEditUpdateNote] = useState('')
+  const [editUpdateStage, setEditUpdateStage] = useState('')
+  const [editUpdateSaving, setEditUpdateSaving] = useState(false)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const actionsRef = useRef<HTMLDivElement>(null)
 
   const loadProject = useCallback(async () => {
     try {
@@ -107,16 +87,26 @@ export default function ProjectPage() {
     loadProject()
   }, [loadProject])
 
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+        setShowActions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   const completedStages = project?.stages.filter((s) => s.is_completed).length || 0
   const progress = project && project.stages.length > 0
     ? Math.round((completedStages / project.stages.length) * 100)
     : 0
   const incompleteStages = project?.stages.filter((s) => !s.is_completed) || []
-  const latestPhoto = project?.updates.flatMap((update) => update.photos || [])[0] as Photo | undefined
+  const latestPhoto = project?.cover_image_url || project?.updates.flatMap((update) => update.photos || [])[0]?.storage_url
 
   const handleStageToggle = (stageId: string) => {
-    setSelectedStages(prev => 
-      prev.includes(stageId) 
+    setSelectedStages(prev =>
+      prev.includes(stageId)
         ? prev.filter(id => id !== stageId)
         : [...prev, stageId]
     )
@@ -129,9 +119,93 @@ export default function ProjectPage() {
     }
   }
 
+  const openEditModal = () => {
+    if (!project) return
+    setEditName(project.name)
+    setEditAddress(project.address || '')
+    setEditClientName(project.client_name || '')
+    setEditClientEmail(project.client_email || '')
+    setEditStartDate(project.start_date || '')
+    setEditEndDate(project.end_date || '')
+    setShowEditModal(true)
+    setShowActions(false)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!project) return
+    setEditSaving(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          name: editName,
+          address: editAddress || null,
+          client_name: editClientName || null,
+          client_email: editClientEmail || null,
+          start_date: editStartDate || null,
+          end_date: editEndDate || null,
+        })
+        .eq('id', projectId)
+
+      if (error) throw error
+      setShowEditModal(false)
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao editar projeto:', err)
+      setError(err.message || 'Erro ao salvar alterações')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!project) return
+    setDeleting(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+
+      if (error) throw error
+      router.push('/dashboard')
+    } catch (err: any) {
+      console.error('Erro ao excluir projeto:', err)
+      setError(err.message || 'Erro ao excluir projeto')
+      setDeleting(false)
+    }
+  }
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !project) return
+
+    try {
+      const supabase = createClient()
+      const filePath = `covers/${projectId}/${Date.now()}-${file.name}`
+      const { error: uploadError } = await supabase.storage.from('photos').upload(filePath, file)
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ cover_image_url: urlData.publicUrl })
+        .eq('id', projectId)
+
+      if (updateError) throw updateError
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao enviar capa:', err)
+      setError(err.message || 'Erro ao alterar imagem de capa')
+    }
+  }
+
   const handleSaveUpdate = async () => {
     if (selectedStages.length === 0 || !project) return
-    
+
     setSaving(true)
     setError('')
 
@@ -153,9 +227,9 @@ export default function ProjectPage() {
       for (const stageId of selectedStages) {
         const { error: stageError } = await supabase
           .from('stages')
-          .update({ 
-            is_completed: true, 
-            completed_at: new Date().toISOString() 
+          .update({
+            is_completed: true,
+            completed_at: new Date().toISOString()
           })
           .eq('id', stageId)
 
@@ -165,12 +239,12 @@ export default function ProjectPage() {
       for (const photo of photos) {
         const fileName = `${update.id}/${Date.now()}-${photo.name}`
         const storagePath = `${projectId}/${fileName}`
-        
+
         const { error: uploadError } = await supabase.storage.from('photos').upload(storagePath, photo)
         if (uploadError) throw uploadError
-        
+
         const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
-        
+
         const { error: photoError } = await supabase.from('photos').insert({
           update_id: update.id,
           storage_path: storagePath,
@@ -193,6 +267,63 @@ export default function ProjectPage() {
       setError(err.message || 'Erro ao salvar registro')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleEditUpdate = (update: UpdateWithPhotos) => {
+    setEditingUpdate(update.id)
+    setEditUpdateNote(update.note || '')
+    setEditUpdateStage(update.stage_id || '')
+  }
+
+  const handleSaveUpdateEdit = async (updateId: string) => {
+    setEditUpdateSaving(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('updates')
+        .update({
+          note: editUpdateNote || null,
+          stage_id: editUpdateStage || null,
+        })
+        .eq('id', updateId)
+
+      if (error) throw error
+
+      setEditingUpdate(null)
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao editar registro:', err)
+      setError(err.message || 'Erro ao salvar alterações')
+    } finally {
+      setEditUpdateSaving(false)
+    }
+  }
+
+  const handleDeleteUpdate = async (updateId: string) => {
+    try {
+      const supabase = createClient()
+
+      const { data: photos } = await supabase
+        .from('photos')
+        .select('storage_path')
+        .eq('update_id', updateId)
+
+      if (photos && photos.length > 0) {
+        const paths = photos.map((p: any) => p.storage_path)
+        await supabase.storage.from('photos').remove(paths)
+      }
+
+      const { error } = await supabase
+        .from('updates')
+        .delete()
+        .eq('id', updateId)
+
+      if (error) throw error
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao excluir registro:', err)
+      setError(err.message || 'Erro ao excluir registro')
     }
   }
 
@@ -220,19 +351,69 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <div className="p-6 bg-surface-container-low rounded-lg text-sm text-on-surface-variant">
-        Projeto nÃ£o encontrado.
+        Projeto não encontrado.
       </div>
     )
   }
 
   return (
     <>
-      <div className="mb-6 lg:mb-8">
+      <div className="mb-6 lg:mb-8 flex items-center justify-between">
         <Link href="/dashboard" className="inline-flex items-center gap-2 text-outline hover:text-on-surface transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="font-label text-[10px] uppercase tracking-widest">Voltar</span>
         </Link>
+
+        <div className="relative" ref={actionsRef}>
+          <button
+            onClick={() => setShowActions(!showActions)}
+            className="p-2 text-outline hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+
+          {showActions && (
+            <div className="absolute right-0 top-10 w-56 bg-surface-container-lowest rounded-xl shadow-architectural border border-outline-variant/10 overflow-hidden z-50">
+              <button
+                onClick={openEditModal}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
+              >
+                <Edit className="w-4 h-4 text-outline" />
+                Editar Projeto
+              </button>
+              <button
+                onClick={() => { coverInputRef.current?.click(); setShowActions(false) }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
+              >
+                <ImageIcon className="w-4 h-4 text-outline" />
+                Alterar Capa
+              </button>
+              <div className="h-px bg-outline-variant/20 mx-4" />
+              <button
+                onClick={() => { setShowDeleteConfirm(true); setShowActions(false) }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir Projeto
+              </button>
+            </div>
+          )}
+
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverUpload}
+            className="hidden"
+          />
+        </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         <div className="col-span-1 lg:col-span-8 space-y-6 lg:space-y-8">
@@ -246,24 +427,35 @@ export default function ProjectPage() {
             </p>
           </div>
 
-          <div className="aspect-video w-full rounded-xl overflow-hidden bg-surface-container-low relative">
+          <div className="aspect-video w-full rounded-xl overflow-hidden bg-surface-container-low relative group">
             {latestPhoto ? (
-              <img 
-                src={latestPhoto.storage_url} 
-                alt="Foto mais recente do projeto" 
+              <img
+                src={latestPhoto}
+                alt="Foto do projeto"
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-surface-container-highest" />
+              <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+                <ImageIcon className="w-12 h-12 text-outline/30" />
+              </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6 lg:p-12">
               <span className="text-on-primary/70 text-xs lg:text-sm font-bold tracking-widest mb-1 lg:mb-2">PROJETO ATUAL</span>
               <h3 className="text-on-primary font-headline text-2xl lg:text-4xl font-medium italic">{project.name}</h3>
             </div>
+            <button
+              onClick={() => coverInputRef.current?.click()}
+              className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Alterar Capa
+            </button>
           </div>
 
           <section>
-            <h3 className="font-headline text-lg lg:text-xl font-bold text-on-surface mb-4 lg:mb-6">Atualizações Recentes</h3>
+            <div className="flex items-center justify-between mb-4 lg:mb-6">
+              <h3 className="font-headline text-lg lg:text-xl font-bold text-on-surface">Atualizações Recentes</h3>
+            </div>
             <div className="space-y-4 lg:space-y-6">
               {project.updates.length === 0 && (
                 <div className="bg-surface-container-low rounded-xl p-6 text-sm text-on-surface-variant">
@@ -273,38 +465,104 @@ export default function ProjectPage() {
 
               {project.updates.map((update) => (
                 <div key={update.id} className="bg-surface-container-low rounded-xl p-4 lg:p-6">
-                  <div className="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4">
-                    <Camera className="w-4 lg:w-5 h-4 lg:h-5 text-outline" />
-                    <span className="font-label text-[10px] uppercase tracking-widest text-outline">
-                      {new Date(update.created_at).toLocaleDateString('pt-BR')}
-                    </span>
-                    {update.stage && (
-                      <>
-                        <span className="text-outline">—</span>
-                        <span className="font-bold text-on-surface text-sm lg:text-base">{update.stage.name}</span>
-                      </>
-                    )}
-                  </div>
-                  
-                  {update.note && (
-                    <p className="text-on-surface-variant mb-3 lg:mb-4 text-sm lg:text-base">{update.note}</p>
-                  )}
-                  
-                  {update.photos && update.photos.length > 0 && (
-                    <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2">
-                      {update.photos.map((photo: any) => (
-                        <div
-                          key={photo.id}
-                          className="w-20 lg:w-24 h-20 lg:h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0"
+                  {editingUpdate === update.id ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-outline">
+                          Editando registro de {new Date(update.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <select
+                        value={editUpdateStage}
+                        onChange={(e) => setEditUpdateStage(e.target.value)}
+                        className="w-full bg-surface-container-low border-b-2 border-outline-variant focus:border-primary focus:ring-0 rounded-t-lg p-3 text-sm"
+                      >
+                        <option value="">Nenhuma etapa</option>
+                        {project.stages.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                      <textarea
+                        value={editUpdateNote}
+                        onChange={(e) => setEditUpdateNote(e.target.value)}
+                        placeholder="Nota do registro..."
+                        className="w-full bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 rounded-t-lg p-3 text-sm placeholder:text-outline/50 transition-all h-20 resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setEditingUpdate(null)}
                         >
-                          <img 
-                            src={photo.storage_url} 
-                            alt="" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveUpdateEdit(update.id)}
+                          disabled={editUpdateSaving}
+                        >
+                          {editUpdateSaving ? 'Salvando...' : 'Salvar'}
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4">
+                          <Camera className="w-4 lg:w-5 h-4 lg:h-5 text-outline" />
+                          <span className="font-label text-[10px] uppercase tracking-widest text-outline">
+                            {new Date(update.created_at).toLocaleDateString('pt-BR')}
+                          </span>
+                          {update.stage && (
+                            <>
+                              <span className="text-outline">—</span>
+                              <span className="font-bold text-on-surface text-sm lg:text-base">{update.stage.name}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button
+                            onClick={() => handleEditUpdate(update)}
+                            className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded transition-colors"
+                            title="Editar registro"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Excluir este registro?')) {
+                                handleDeleteUpdate(update.id)
+                              }
+                            }}
+                            className="p-1.5 text-outline hover:text-error hover:bg-error-container/30 rounded transition-colors"
+                            title="Excluir registro"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {update.note && (
+                        <p className="text-on-surface-variant mb-3 lg:mb-4 text-sm lg:text-base">{update.note}</p>
+                      )}
+
+                      {update.photos && update.photos.length > 0 && (
+                        <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2">
+                          {update.photos.map((photo: any) => (
+                            <div
+                              key={photo.id}
+                              className="w-20 lg:w-24 h-20 lg:h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0"
+                            >
+                              <img
+                                src={photo.storage_url}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
@@ -331,7 +589,7 @@ export default function ProjectPage() {
                 <div className="bg-surface-container-highest p-3 lg:p-4 rounded-lg">
                   <span className="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1">Dias</span>
                   <span className="font-headline text-xl lg:text-2xl font-black">
-                    {project.start_date 
+                    {project.start_date
                       ? Math.floor((Date.now() - new Date(project.start_date).getTime()) / (1000 * 60 * 60 * 24))
                       : 0}
                   </span>
@@ -341,7 +599,7 @@ export default function ProjectPage() {
           </div>
 
           {!showRegister ? (
-            <button 
+            <button
               onClick={() => setShowRegister(true)}
               className="w-full bg-primary text-primary-foreground py-4 lg:py-6 rounded-xl font-bold text-[12px] tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary-dim transition-colors shadow-architectural"
             >
@@ -352,7 +610,7 @@ export default function ProjectPage() {
             <div className="bg-surface-container-lowest rounded-xl p-6 lg:p-8 shadow-architectural">
               <div className="flex items-center justify-between mb-6">
                 <span className="font-label text-[10px] uppercase tracking-[0.15em] text-outline font-semibold">Registro Diário</span>
-                <button 
+                <button
                   onClick={() => {
                     setShowRegister(false)
                     setRegisterStep(1)
@@ -368,7 +626,7 @@ export default function ProjectPage() {
 
               <div className="flex gap-1.5 mb-6">
                 {[1, 2, 3].map((step) => (
-                  <div 
+                  <div
                     key={step}
                     className={`h-1 rounded-full transition-all duration-500 flex-1 ${
                       step <= registerStep ? 'bg-primary' : 'bg-surface-container-highest'
@@ -381,7 +639,7 @@ export default function ProjectPage() {
                 <div className="space-y-4">
                   <h2 className="font-headline text-lg lg:text-xl font-bold text-on-surface">O que foi feito hoje?</h2>
                   <p className="text-on-surface-variant text-sm">Selecione as frentes de trabalho.</p>
-                  
+
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {incompleteStages.map((stage: any) => (
                       <button
@@ -403,7 +661,7 @@ export default function ProjectPage() {
                     ))}
                   </div>
 
-                  <Button 
+                  <Button
                     onClick={() => setRegisterStep(2)}
                     disabled={selectedStages.length === 0}
                     className="w-full"
@@ -427,9 +685,9 @@ export default function ProjectPage() {
                       >
                         {photos[i] ? (
                           <>
-                            <img 
-                              src={URL.createObjectURL(photos[i])} 
-                              alt="" 
+                            <img
+                              src={URL.createObjectURL(photos[i])}
+                              alt=""
                               className="w-full h-full object-cover rounded-lg"
                             />
                             <button
@@ -488,8 +746,8 @@ export default function ProjectPage() {
                     <Button variant="secondary" onClick={() => setRegisterStep(2)} className="flex-1">
                       Voltar
                     </Button>
-                    <Button 
-                      onClick={handleSaveUpdate} 
+                    <Button
+                      onClick={handleSaveUpdate}
                       disabled={saving}
                       className="flex-1"
                     >
@@ -507,6 +765,109 @@ export default function ProjectPage() {
           </Button>
         </div>
       </div>
+
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest rounded-2xl p-8 w-full max-w-lg mx-4 shadow-architectural max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-headline text-xl font-bold text-on-surface">Editar Projeto</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-outline hover:text-on-surface p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Nome do Projeto</label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Endereço</label>
+                <Input
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Início</label>
+                  <Input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Previsão Término</label>
+                  <Input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Cliente</label>
+                <Input
+                  value={editClientName}
+                  onChange={(e) => setEditClientName(e.target.value)}
+                  placeholder="Nome do cliente"
+                  className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">Email do Cliente</label>
+                <Input
+                  type="email"
+                  value={editClientEmail}
+                  onChange={(e) => setEditClientEmail(e.target.value)}
+                  placeholder="email@cliente.com"
+                  className="h-12 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <Button variant="secondary" onClick={() => setShowEditModal(false)} className="flex-1 h-12">
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit} disabled={editSaving} className="flex-1 h-12">
+                {editSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest rounded-2xl p-8 w-full max-w-sm mx-4 shadow-architectural">
+            <h3 className="font-headline text-xl font-bold text-on-surface mb-2">Excluir Projeto</h3>
+            <p className="text-on-surface-variant text-sm mb-6">
+              Tem certeza que deseja excluir <strong>{project.name}</strong>? Esta ação não pode ser desfeita. Todas as atualizações, fotos e dados associados serão removidos permanentemente.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)} className="flex-1 h-12">
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="flex-1 h-12">
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

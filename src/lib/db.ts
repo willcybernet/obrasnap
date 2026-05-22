@@ -1,5 +1,5 @@
 import { createClient } from './supabase'
-import type { Project, Stage, Update, Photo, ProjectProgress, DEFAULT_STAGES } from './types'
+import type { Project, Stage, Update, Photo, ProjectProgress, UpdateUpdateData } from './types'
 
 function generateSlug(name: string): string {
   const timestamp = Date.now().toString(36)
@@ -249,4 +249,64 @@ export async function updateProject(projectId: string, updates: Partial<Project>
 
   if (error) throw error
   return data
+}
+
+export async function updateUpdate(updateId: string, updates: UpdateUpdateData) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('updates')
+    .update(updates)
+    .eq('id', updateId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteUpdate(updateId: string) {
+  const supabase = createClient()
+
+  const { data: photos } = await supabase
+    .from('photos')
+    .select('storage_path')
+    .eq('update_id', updateId)
+
+  if (photos && photos.length > 0) {
+    const paths = photos.map((p: { storage_path: string }) => p.storage_path)
+    await supabase.storage.from('photos').remove(paths)
+  }
+
+  const { error } = await supabase
+    .from('updates')
+    .delete()
+    .eq('id', updateId)
+
+  if (error) throw error
+}
+
+export async function uploadProjectCover(
+  projectId: string,
+  file: File
+): Promise<string> {
+  const supabase = createClient()
+
+  const filePath = `covers/${projectId}/${Date.now()}-${file.name}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('photos')
+    .upload(filePath, file)
+
+  if (uploadError) throw uploadError
+
+  const { data: urlData } = supabase.storage
+    .from('photos')
+    .getPublicUrl(filePath)
+
+  const publicUrl = urlData.publicUrl
+
+  await updateProject(projectId, { cover_image_url: publicUrl })
+
+  return publicUrl
 }

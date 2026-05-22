@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
   end_date DATE,
   public_slug VARCHAR(100) UNIQUE,
   is_active BOOLEAN DEFAULT TRUE,
+  cover_image_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

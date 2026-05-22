@@ -19,6 +19,7 @@ export interface Project {
   start_date: string | null
   end_date: string | null
   public_slug: string | null
+  cover_image_url: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -43,6 +44,11 @@ export interface Update {
   stage_id: string | null
   note: string | null
   created_at: string
+}
+
+export interface UpdateUpdateData {
+  stage_id?: string | null
+  note?: string | null
 }
 
 export interface Photo {
