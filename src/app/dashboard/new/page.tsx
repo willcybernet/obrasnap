@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase'
@@ -13,6 +13,7 @@ export default function NewProjectPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
   
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
@@ -70,7 +71,22 @@ export default function NewProjectPage() {
       await supabase.from('stages').insert(stagesData)
     }
 
-    router.push(`/dashboard/projects/${project.id}`)
+    setSuccess(true)
+    setTimeout(() => {
+      router.push(`/dashboard/projects/${project.id}`)
+    }, 1500)
+  }
+
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mb-6">
+          <CheckCircle className="w-10 h-10 text-success" />
+        </div>
+        <h2 className="font-headline text-2xl lg:text-3xl font-bold text-on-background mb-2">Projeto criado!</h2>
+        <p className="text-on-surface-variant">Redirecionando para o projeto...</p>
+      </div>
+    )
   }
 
   return (
@@ -246,7 +262,7 @@ export default function NewProjectPage() {
               className="flex-1 h-12 lg:h-14 bg-primary text-primary-foreground font-bold tracking-widest uppercase text-[12px]"
               disabled={loading}
             >
-              {loading ? 'Criando...' : 'Criar'}
+              {loading ? 'Criando...' : 'Criar Projeto'}
             </Button>
           </div>
         </form>

@@ -1,68 +1,106 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, HardHat } from 'lucide-react'
+import { createClient } from '@/lib/supabase'
+import type { Project } from '@/lib/types'
 
-const mockProjects = [
-  {
-    id: '1',
-    name: 'Casa Silva',
-    address: 'Av. Paulista, 1500',
-    city: 'São Paulo, SP',
-    progress: 75,
-    is_active: true,
-    stage: 'Acabamento',
-    status: 'emprogresso',
-  },
-  {
-    id: '2',
-    name: 'Edifício Horizonte',
-    address: 'Rua das Flores, 45',
-    city: 'Curitiba, PR',
-    progress: 15,
-    is_active: true,
-    stage: 'Estrutura',
-    status: 'planejamento',
-  },
-  {
-    id: '3',
-    name: 'Galpão Logístico',
-    address: 'Rod. Castelo Branco, KM 22',
-    city: 'Barueri, SP',
-    progress: 98,
-    is_active: true,
-    stage: 'Entrega',
-    status: 'finalizando',
-  },
-  {
-    id: '4',
-    name: 'Residencial Park',
-    address: 'Al. Gabriel Monteiro, 300',
-    city: 'São Paulo, SP',
-    progress: 45,
-    is_active: true,
-    stage: 'Fundação',
-    status: 'critico',
-  },
-]
+interface ProjectWithProgress extends Project {
+  progress: number
+  current_stage: string
+  status: string
+}
 
 export default function DashboardPage() {
-  const activeProjects = mockProjects.filter(p => p.is_active)
-  const completedProjects = mockProjects.filter(p => !p.is_active)
+  const [projects, setProjects] = useState<ProjectWithProgress[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) return
+
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('*, stages(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (projectsError) throw projectsError
+
+        const projectsWithProgress = (projectsData || []).map((project: any) => {
+          const stages = project.stages || []
+          const totalStages = stages.length
+          const completedStages = stages.filter((s: any) => s.is_completed).length
+          const progress = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0
+          
+          const currentStage = stages.find((s: any) => !s.is_completed)?.name || stages[stages.length - 1]?.name || 'Início'
+          
+          let status = 'emprogresso'
+          if (progress === 100) status = 'finalizando'
+          else if (progress < 25) status = 'planejamento'
+          else if (progress < 50) status = 'critico'
+
+          return {
+            ...project,
+            progress,
+            current_stage: currentStage,
+            status,
+          }
+        })
+
+        setProjects(projectsWithProgress)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [])
+
+  const activeProjects = projects.filter(p => p.is_active)
+  const completedProjects = projects.filter(p => !p.is_active)
   const delayedProjects = activeProjects.filter(p => p.progress < 50)
 
   const avgEfficiency = activeProjects.length > 0
     ? Math.round(activeProjects.reduce((acc, p) => acc + p.progress, 0) / activeProjects.length)
     : 0
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-error-container text-on-error-container rounded-lg text-sm">
+        Erro ao carregar projetos: {error}
+      </div>
+    )
+  }
+
   return (
     <>
       <section className="mb-12 lg:mb-20">
         <div className="flex flex-col gap-2">
-          <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">Atelier Construct • Dashboard</span>
+          <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">ObraSnap • Dashboard</span>
           <h2 className="font-headline text-3xl lg:text-6xl tracking-tighter text-on-background font-medium">Meus Projetos</h2>
           <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
-            Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.
+            {activeProjects.length > 0 ? (
+              <>Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.</>
+            ) : (
+              <>Você ainda não tem obras cadastradas. Comece criando seu primeiro projeto!</>
+            )}
           </p>
         </div>
       </section>
@@ -89,62 +127,77 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
-        {mockProjects.map((project) => {
-          const statusColors: Record<string, string> = {
-            emprogresso: 'bg-primary',
-            planejamento: 'bg-on-tertiary-container',
-            finalizando: 'bg-on-secondary-fixed',
-            critico: 'bg-on-error-container',
-          }
-          const bgColors: Record<string, string> = {
-            emprogresso: 'bg-white/80',
-            planejamento: 'bg-tertiary-container/80',
-            finalizando: 'bg-secondary-fixed-dim/80',
-            critico: 'bg-error-container/80',
-          }
-          
-          return (
-            <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer">
-              <div className="relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-surface-container-low">
-                <div className={`absolute top-3 lg:top-4 left-3 lg:left-4 ${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
-                  <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
-                  <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
-                    {project.status === 'emprogresso' && 'Em Progresso'}
-                    {project.status === 'planejamento' && 'Planejamento'}
-                    {project.status === 'finalizando' && 'Finalizando'}
-                    {project.status === 'critico' && 'Crítico'}
-                  </span>
-                </div>
-              </div>
-              <div className="space-y-2 lg:space-y-4">
-                <div>
-                  <span className="font-label text-[10px] uppercase tracking-widest text-outline">{project.city}</span>
-                  <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight">{project.name}</h3>
-                  <p className="text-sm text-on-surface-variant">{project.address}</p>
-                </div>
-                <div className="pt-2 lg:pt-4 border-t border-surface-container">
-                  <div className="flex justify-between items-end mb-1 lg:mb-2">
-                    <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">{project.stage}</span>
-                    <span className="font-headline text-lg lg:text-xl font-light">{project.progress}%</span>
-                  </div>
-                  <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
-                    <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-
-        <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all hover:bg-surface-container-low hover:border-primary/40 min-h-[280px] lg:min-h-[420px]">
-          <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
-            <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
+      {projects.length === 0 ? (
+        <section className="flex flex-col items-center justify-center py-16 lg:py-24">
+          <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-surface-container-low flex items-center justify-center mb-6 lg:mb-8">
+            <HardHat className="w-10 h-10 lg:w-12 lg:h-12 text-outline" />
           </div>
-          <h4 className="font-headline text-lg lg:text-xl font-bold tracking-tight text-on-background">Novo Projeto</h4>
-          <p className="text-sm text-on-surface-variant text-center mt-2 max-w-[200px]">Inicie uma nova jornada de construção agora.</p>
-        </Link>
-      </section>
+          <h3 className="font-headline text-2xl lg:text-3xl font-bold text-on-background mb-2 lg:mb-4">Nenhum projeto ainda</h3>
+          <p className="text-on-surface-variant text-center max-w-md mb-6 lg:mb-8">
+            Comece criando seu primeiro projeto para acompanhar o progresso da obra e compartilhar com seu cliente.
+          </p>
+          <Link href="/dashboard/new" className="inline-flex items-center gap-2 px-6 lg:px-8 py-3 lg:py-4 bg-primary text-primary-foreground rounded-lg font-bold text-sm lg:text-base tracking-widest uppercase hover:bg-primary/90 transition-colors">
+            <Plus className="w-5 h-5" />
+            Criar Primeiro Projeto
+          </Link>
+        </section>
+      ) : (
+        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
+          {projects.map((project) => {
+            const statusColors: Record<string, string> = {
+              emprogresso: 'bg-primary',
+              planejamento: 'bg-on-tertiary-container',
+              finalizando: 'bg-on-secondary-fixed',
+              critico: 'bg-on-error-container',
+            }
+            const bgColors: Record<string, string> = {
+              emprogresso: 'bg-white/80',
+              planejamento: 'bg-tertiary-container/80',
+              finalizando: 'bg-secondary-fixed-dim/80',
+              critico: 'bg-error-container/80',
+            }
+            
+            return (
+              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer">
+                <div className="relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-surface-container-low">
+                  <div className={`absolute top-3 lg:top-4 left-3 lg:left-4 ${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
+                    <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
+                    <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
+                      {project.status === 'emprogresso' && 'Em Progresso'}
+                      {project.status === 'planejamento' && 'Planejamento'}
+                      {project.status === 'finalizando' && 'Finalizando'}
+                      {project.status === 'critico' && 'Crítico'}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 lg:space-y-4">
+                  <div>
+                    <span className="font-label text-[10px] uppercase tracking-widest text-outline">{project.address || 'Sem endereço'}</span>
+                    <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight">{project.name}</h3>
+                  </div>
+                  <div className="pt-2 lg:pt-4 border-t border-surface-container">
+                    <div className="flex justify-between items-end mb-1 lg:mb-2">
+                      <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">{project.current_stage}</span>
+                      <span className="font-headline text-lg lg:text-xl font-light">{project.progress}%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
+                      <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+
+          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all hover:bg-surface-container-low hover:border-primary/40 min-h-[280px] lg:min-h-[420px]">
+            <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
+              <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
+            </div>
+            <h4 className="font-headline text-lg lg:text-xl font-bold tracking-tight text-on-background">Novo Projeto</h4>
+            <p className="text-sm text-on-surface-variant text-center mt-2 max-w-[200px]">Inicie uma nova jornada de construção agora.</p>
+          </Link>
+        </section>
+      )}
     </>
   )
 }
