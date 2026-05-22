@@ -217,6 +217,15 @@ export default function DashboardPage() {
                       {project.status === 'critico' && 'Crítico'}
                     </span>
                   </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 lg:p-6">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Progresso</span>
+                      <span className="text-white font-headline font-bold text-sm lg:text-base">{project.progress}%</span>
+                    </div>
+                    <div className="w-full h-1 lg:h-1.5 bg-white/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-white rounded-full" style={{ width: `${project.progress}%` }}></div>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2 lg:space-y-4">
                   <div>

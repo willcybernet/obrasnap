@@ -373,7 +373,7 @@ export default function ProjectPage() {
           </button>
 
           {showActions && (
-            <div className="absolute right-0 top-10 w-56 bg-surface-container-lowest rounded-xl shadow-architectural border border-outline-variant/10 overflow-hidden z-50">
+            <div className="absolute right-0 top-10 w-56 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 overflow-hidden z-[100]">
               <button
                 onClick={openEditModal}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors"
@@ -439,9 +439,18 @@ export default function ProjectPage() {
                 <ImageIcon className="w-12 h-12 text-outline/30" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-6 lg:p-12">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6 lg:p-12">
               <span className="text-on-primary/70 text-xs lg:text-sm font-bold tracking-widest mb-1 lg:mb-2">PROJETO ATUAL</span>
               <h3 className="text-on-primary font-headline text-2xl lg:text-4xl font-medium italic">{project.name}</h3>
+              <div className="mt-3 lg:mt-4 max-w-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Progresso</span>
+                  <span className="text-white font-headline font-bold text-sm">{progress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full" style={{ width: `${progress}%` }}></div>
+                </div>
+              </div>
             </div>
             <button
               onClick={() => coverInputRef.current?.click()}
@@ -601,7 +610,7 @@ export default function ProjectPage() {
           {!showRegister ? (
             <button
               onClick={() => setShowRegister(true)}
-              className="w-full bg-primary text-primary-foreground py-4 lg:py-6 rounded-xl font-bold text-[12px] tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary-dim transition-colors shadow-architectural"
+              className="w-full bg-primary text-primary-foreground py-4 lg:py-6 rounded-xl font-bold text-[12px] tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
             >
               <Camera className="w-5 h-5" />
               Registrar Hoje
@@ -759,7 +768,7 @@ export default function ProjectPage() {
             </div>
           )}
 
-          <Button variant="secondary" className="w-full" onClick={copyLink}>
+          <Button variant="secondary" className="w-full border border-outline-variant/30 shadow-sm hover:shadow-md hover:bg-surface-container-highest transition-all active:scale-[0.98]" onClick={copyLink}>
             <Share2 className="w-4 h-4 mr-2" />
             Compartilhar
           </Button>
