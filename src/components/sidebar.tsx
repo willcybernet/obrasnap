@@ -52,7 +52,7 @@ export function Sidebar() {
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full flex flex-col p-8 z-50 w-72 transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#F4F4F4' }}>
+      <aside className={`fixed left-0 top-0 h-full flex flex-col p-8 z-50 w-72 transition-transform duration-300 lg:translate-x-0 bg-surface-container-low ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center justify-between mb-12">
           <div>
             <h1 className="font-headline font-black text-xl tracking-tighter text-on-background">Atelier</h1>

@@ -30,7 +30,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${manrope.variable}`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >

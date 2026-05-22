@@ -41,7 +41,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="lg:ml-72 min-h-screen">
-        <header className="flex justify-between items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-30" style={{ backgroundColor: '#F4F4F4' }}>
+        <header className="flex justify-between items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-30 bg-surface-container-low">
           <div className="flex items-center gap-4 lg:gap-8">
             <span className="text-xl lg:text-2xl font-bold tracking-tighter text-on-background hidden lg:block">ObraSnap</span>
           </div>
@@ -54,12 +54,12 @@ export default function DashboardLayout({
                 type="text"
               />
             </div>
-            <button className="text-[#5f5e5e] hover:text-[#1a1a1a] transition-all">
+            <button className="text-outline hover:text-on-background transition-all">
               <Bell className="w-5 h-5" />
             </button>
             <button 
               onClick={() => router.push('/dashboard/settings')}
-              className="text-[#5f5e5e] hover:text-[#1a1a1a] transition-all hidden md:block"
+              className="text-outline hover:text-on-background transition-all hidden md:block"
             >
               <Settings className="w-5 h-5" />
             </button>
