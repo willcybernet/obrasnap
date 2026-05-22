@@ -90,8 +90,8 @@ export default function NewProjectPage() {
 
       setSuccess(true)
       setTimeout(() => {
-        router.push(`/dashboard/projects/${project.id}`)
-      }, 1500)
+        router.push('/dashboard')
+      }, 2000)
     } catch (err: any) {
       console.error('Erro geral:', err)
       setError(err.message || 'Erro desconhecido ao criar projeto')
@@ -105,8 +105,8 @@ export default function NewProjectPage() {
         <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mb-6">
           <CheckCircle className="w-10 h-10 text-success" />
         </div>
-        <h2 className="font-headline text-2xl lg:text-3xl font-bold text-on-background mb-2">Projeto criado!</h2>
-        <p className="text-on-surface-variant">Redirecionando para o projeto...</p>
+        <h2 className="font-headline text-2xl lg:text-3xl font-bold text-on-background mb-2">Projeto criado com sucesso!</h2>
+        <p className="text-on-surface-variant text-center max-w-md mb-6">Seu projeto já está disponível no dashboard. Redirecionando...</p>
       </div>
     )
   }

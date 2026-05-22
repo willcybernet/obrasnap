@@ -16,14 +16,26 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<ProjectWithProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
         
-        if (!user) return
+        if (authError) {
+          console.error('Erro de autenticação:', authError)
+          setError('Erro de autenticação. Por favor, faça login novamente.')
+          return
+        }
+
+        if (!user) {
+          router.push('/login')
+          return
+        }
+
+        console.log('Buscando projetos para usuário:', user.id)
 
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
@@ -33,8 +45,10 @@ export default function DashboardPage() {
 
         if (projectsError) {
           console.error('Erro ao buscar projetos:', projectsError)
-          throw projectsError
+          throw new Error(projectsError.message)
         }
+
+        console.log('Projetos encontrados:', projectsData)
 
         const projectsWithProgress = (projectsData || []).map((project: any) => {
           const stages = project.stages || []
@@ -58,15 +72,17 @@ export default function DashboardPage() {
         })
 
         setProjects(projectsWithProgress)
+        console.log('Projetos processados:', projectsWithProgress)
       } catch (err: any) {
-        setError(err.message)
+        console.error('Erro geral ao buscar projetos:', err)
+        setError(err.message || 'Erro ao carregar projetos')
       } finally {
         setLoading(false)
       }
     }
 
     fetchProjects()
-  }, [])
+  }, [retryCount])
 
   const activeProjects = projects.filter(p => p.is_active)
   const completedProjects = projects.filter(p => !p.is_active)
@@ -86,8 +102,16 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="p-4 bg-error-container text-on-error-container rounded-lg text-sm">
-        Erro ao carregar projetos: {error}
+      <div className="p-6 bg-error-container text-on-error-container rounded-lg text-sm">
+        <div className="flex flex-col items-center text-center">
+          <p className="mb-4">Erro ao carregar projetos: {error}</p>
+          <button 
+            onClick={() => setRetryCount(prev => prev + 1)}
+            className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
       </div>
     )
   }
@@ -107,6 +131,20 @@ export default function DashboardPage() {
           </p>
         </div>
       </section>
+
+      {error && (
+        <div className="mb-8 p-6 bg-error-container text-on-error-container rounded-lg text-sm">
+          <div className="flex flex-col items-center text-center">
+            <p className="mb-4">Erro ao carregar projetos: {error}</p>
+            <button 
+              onClick={() => setRetryCount(prev => prev + 1)}
+              className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      )}
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-8 mb-12 lg:mb-20">
         <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-surface-container border border-outline-variant/10">

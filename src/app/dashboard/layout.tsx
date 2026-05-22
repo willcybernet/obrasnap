@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { Search, Bell, Settings, Headphones } from 'lucide-react'
+import { Search, Bell, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 
 export default function DashboardLayout({
@@ -65,22 +65,14 @@ export default function DashboardLayout({
             >
               <Settings className="w-5 h-5" />
             </button>
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest cursor-pointer" onClick={() => router.push('/dashboard/settings')}>
-              <div className="w-full h-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
-                U
-              </div>
-            </div>
+
           </div>
         </header>
         <div className="px-4 md:px-8 lg:px-16 pt-8 md:pt-12 pb-16 lg:pb-24 max-w-7xl mx-auto">
           {children}
         </div>
       </main>
-      <div className="fixed bottom-8 right-8 z-50 hidden md:block">
-        <button className="bg-primary text-primary-foreground w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all">
-          <Headphones className="w-6 h-6" />
-        </button>
-      </div>
+
     </div>
   )
 }
