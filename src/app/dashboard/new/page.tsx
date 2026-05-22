@@ -28,53 +28,75 @@ export default function NewProjectPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (!user) {
-      router.push('/login')
-      return
-    }
+      if (authError) {
+        throw new Error('Erro de autenticação: ' + authError.message)
+      }
 
-    const timestamp = Date.now().toString(36)
-    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + timestamp
+      if (!user) {
+        router.push('/login')
+        return
+      }
 
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        user_id: user.id,
-        name,
-        address,
-        client_name: clientName,
-        client_email: clientEmail,
-        start_date: startDate || null,
-        end_date: endDate || null,
-        public_slug: slug,
-      })
-      .select()
-      .single()
+      console.log('Criando projeto para usuário:', user.id)
 
-    if (projectError) {
-      setError(projectError.message)
+      const timestamp = Date.now().toString(36)
+      const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + timestamp
+
+      console.log('Inserindo projeto:', { name, address, user_id: user.id, slug })
+
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          user_id: user.id,
+          name,
+          address,
+          client_name: clientName || null,
+          client_email: clientEmail || null,
+          start_date: startDate || null,
+          end_date: endDate || null,
+          public_slug: slug,
+        })
+        .select()
+        .single()
+
+      if (projectError) {
+        console.error('Erro ao criar projeto:', projectError)
+        throw new Error(projectError.message)
+      }
+
+      console.log('Projeto criado com sucesso:', project)
+
+      if (project && useTemplate) {
+        const stagesData = DEFAULT_STAGES.map(stage => ({
+          project_id: project.id,
+          name: stage.name,
+          order_index: stage.order,
+          is_completed: false,
+        }))
+
+        const { error: stagesError } = await supabase.from('stages').insert(stagesData)
+        
+        if (stagesError) {
+          console.error('Erro ao criar etapas:', stagesError)
+          throw new Error('Projeto criado, mas erro ao adicionar etapas: ' + stagesError.message)
+        }
+        
+        console.log('Etapas criadas com sucesso')
+      }
+
+      setSuccess(true)
+      setTimeout(() => {
+        router.push(`/dashboard/projects/${project.id}`)
+      }, 1500)
+    } catch (err: any) {
+      console.error('Erro geral:', err)
+      setError(err.message || 'Erro desconhecido ao criar projeto')
       setLoading(false)
-      return
     }
-
-    if (project && useTemplate) {
-      const stagesData = DEFAULT_STAGES.map(stage => ({
-        project_id: project.id,
-        name: stage.name,
-        order_index: stage.order,
-        is_completed: false,
-      }))
-
-      await supabase.from('stages').insert(stagesData)
-    }
-
-    setSuccess(true)
-    setTimeout(() => {
-      router.push(`/dashboard/projects/${project.id}`)
-    }, 1500)
   }
 
   if (success) {
