@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS public.stages (
   project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   order_index INTEGER NOT NULL,
+  start_date DATE,
+  end_date DATE,
   is_completed BOOLEAN DEFAULT FALSE,
   completed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

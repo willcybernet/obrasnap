@@ -389,6 +389,18 @@ export default function ProjectPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleUpdateStageDate = async (stageId: string, startDate: string | null, endDate: string | null) => {
+    const supabase = createClient()
+    const updates: Record<string, string | null> = {}
+    if (startDate !== null) updates.start_date = startDate
+    else updates.start_date = null
+    if (endDate !== null) updates.end_date = endDate
+    else updates.end_date = null
+    const { error } = await supabase.from('stages').update(updates).eq('id', stageId)
+    if (error) throw error
+    await loadProject()
+  }
+
   const handleCompleteProject = async () => {
     if (!project) return
     setCompleting(true)
@@ -773,7 +785,7 @@ export default function ProjectPage() {
 
           <div className="p-6 lg:p-8 bg-surface-container-low rounded-xl border border-outline-variant/10 transition-all duration-300 hover:shadow-soft animate-fade-in-up">
             <h4 className="font-headline text-lg font-bold mb-4">Etapas</h4>
-            <Timeline stages={project.stages} />
+            <Timeline stages={project.stages} onUpdateDate={handleUpdateStageDate} />
           </div>
 
           {!showRegister ? (
