@@ -88,10 +88,30 @@ export default function DashboardPage() {
 
   const activeProjects = projects.filter(p => p.is_active)
   const completedProjects = projects.filter(p => !p.is_active)
-  const delayedProjects = activeProjects.filter(p => p.progress < 50)
+  const delayedProjects = activeProjects.filter(p => {
+    if (!p.end_date) return false
+    return new Date(p.end_date) < new Date() && p.progress < 100
+  })
+
+  const getEfficiency = (project: ProjectWithProgress): number | null => {
+    if (!project.start_date || !project.end_date) return null
+    const start = new Date(project.start_date).getTime()
+    const end = new Date(project.end_date).getTime()
+    const totalDays = (end - start) / (1000 * 60 * 60 * 24)
+    if (totalDays <= 0) return null
+    const elapsedDays = (Date.now() - start) / (1000 * 60 * 60 * 24)
+    if (elapsedDays <= 0) return 100
+    const expectedProgress = Math.min(100, Math.round((elapsedDays / totalDays) * 100))
+    return Math.min(100, Math.round((project.progress / expectedProgress) * 100))
+  }
 
   const avgEfficiency = activeProjects.length > 0
-    ? Math.round(activeProjects.reduce((acc, p) => acc + p.progress, 0) / activeProjects.length)
+    ? (() => {
+        const efficiencies = activeProjects.map(getEfficiency).filter((e): e is number => e !== null)
+        return efficiencies.length > 0
+          ? Math.round(efficiencies.reduce((acc, e) => acc + e, 0) / efficiencies.length)
+          : Math.round(activeProjects.reduce((acc, p) => acc + p.progress, 0) / activeProjects.length)
+      })()
     : 0
 
   if (loading) {
@@ -156,12 +176,18 @@ export default function DashboardPage() {
         
         <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-surface-container border border-outline-variant/10">
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Em Atraso</span>
-          <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-error">{delayedProjects.length}</span>
+          <div>
+            <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-error">{delayedProjects.length}</span>
+            <p className="text-[8px] lg:text-[10px] text-outline mt-1">com prazo vencido</p>
+          </div>
         </div>
         
         <div className="bg-tertiary-container p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-tertiary-fixed-dim border border-outline-variant/10">
           <span className="font-label text-[10px] uppercase tracking-widest text-on-tertiary-container">Eficiência</span>
-          <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-tertiary-container">{avgEfficiency}%</span>
+          <div>
+            <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-tertiary-container">{avgEfficiency}%</span>
+            <p className="text-[8px] lg:text-[10px] text-on-tertiary-container/60 mt-1">progresso real vs cronograma</p>
+          </div>
         </div>
         
         <div className="bg-surface-container-highest p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-outline-variant/20 border border-outline-variant/10">

@@ -42,16 +42,17 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="lg:ml-72 min-h-screen">
-        <header className="flex justify-between items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-40 bg-surface-container-low">
-          <div className="flex items-center gap-3 lg:gap-6">
-            <div className="relative hidden md:flex items-center bg-surface-container rounded-full px-4 py-2 w-48 lg:w-64">
-              <Search className="text-outline w-5 h-5" />
-              <input 
-                className="bg-transparent border-none focus:ring-0 text-sm font-body w-full placeholder:text-outline-variant ml-2" 
-                placeholder="Buscar projeto..." 
-                type="text"
-              />
-            </div>
+        <header className="flex items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-40 bg-surface-container-low">
+          <div className="flex-1" />
+          <div className="relative hidden md:flex items-center bg-surface-container rounded-full px-4 py-2 w-72 lg:w-96">
+            <Search className="text-outline w-5 h-5 shrink-0" />
+            <input 
+              className="bg-transparent border-none focus:ring-0 text-sm font-body w-full placeholder:text-outline-variant ml-2" 
+              placeholder="Buscar projeto..." 
+              type="text"
+            />
+          </div>
+          <div className="flex-1 flex items-center justify-end gap-3 lg:gap-4">
             <ThemeToggle />
             <button className="text-outline hover:text-on-background transition-all">
               <Bell className="w-5 h-5" />
@@ -62,7 +63,6 @@ export default function DashboardLayout({
             >
               <Settings className="w-5 h-5" />
             </button>
-
           </div>
         </header>
         <div className="px-4 md:px-8 lg:px-16 pt-8 md:pt-12 pb-16 lg:pb-24 max-w-7xl mx-auto">
