@@ -19,6 +19,7 @@ export default function ProjectPage() {
   const params = useParams()
   const projectId = params.id as string
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
 
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,6 +31,8 @@ export default function ProjectPage() {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   const loadProject = useCallback(async () => {
     try {
@@ -69,6 +72,7 @@ export default function ProjectPage() {
   const totalStages = project?.stages.length || 0
   const progress = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0
   const latestPhoto = project?.updates.flatMap((update) => update.photos || [])[0] as Photo | undefined
+  const coverImage = project?.cover_image_url || latestPhoto?.storage_url
 
   const handleToggleStageComplete = async (stageId: string) => {
     const stage = project?.stages.find((item) => item.id === stageId)
@@ -97,6 +101,36 @@ export default function ProjectPage() {
     if (!event.target.files) return
     const newPhotos = Array.from(event.target.files).slice(0, 6 - photos.length)
     setPhotos((current) => [...current, ...newPhotos].slice(0, 6))
+  }
+
+  const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !project) return
+
+    try {
+      setCoverUploading(true)
+      setError('')
+
+      const supabase = createClient()
+      const storagePath = `covers/${projectId}/${Date.now()}-${file.name}`
+      const { error: uploadError } = await supabase.storage.from('photos').upload(storagePath, file)
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
+      const { error: projectError } = await supabase
+        .from('projects')
+        .update({ cover_image_url: urlData.publicUrl })
+        .eq('id', projectId)
+
+      if (projectError) throw projectError
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao alterar capa:', err)
+      setError(err.message || 'Erro ao alterar capa')
+    } finally {
+      setCoverUploading(false)
+      event.target.value = ''
+    }
   }
 
   const resetRegister = () => {
@@ -160,6 +194,65 @@ export default function ProjectPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleCompleteProject = async () => {
+    if (!project) return
+
+    try {
+      setCompleting(true)
+      setError('')
+
+      const supabase = createClient()
+      const now = new Date().toISOString()
+
+      for (const stage of project.stages) {
+        if (!stage.is_completed) {
+          const { error: stageError } = await supabase
+            .from('stages')
+            .update({ is_completed: true, completed_at: now })
+            .eq('id', stage.id)
+
+          if (stageError) throw stageError
+        }
+      }
+
+      const { error: projectError } = await supabase
+        .from('projects')
+        .update({ is_active: false })
+        .eq('id', projectId)
+
+      if (projectError) throw projectError
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao concluir projeto:', err)
+      setError(err.message || 'Erro ao concluir projeto')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
+  const handleReactivateProject = async () => {
+    if (!project) return
+
+    try {
+      setCompleting(true)
+      setError('')
+
+      const supabase = createClient()
+      const { error: projectError } = await supabase
+        .from('projects')
+        .update({ is_active: true })
+        .eq('id', projectId)
+
+      if (projectError) throw projectError
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao reativar projeto:', err)
+      setError(err.message || 'Erro ao reativar projeto')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -205,9 +298,9 @@ export default function ProjectPage() {
             </p>
           </section>
 
-          <section className="relative aspect-video w-full overflow-hidden rounded-xl bg-surface-container-low">
-            {latestPhoto ? (
-              <img src={latestPhoto.storage_url} alt="Foto mais recente do projeto" className="h-full w-full object-cover" />
+          <section className="group relative aspect-video w-full overflow-hidden rounded-xl bg-surface-container-low">
+            {coverImage ? (
+              <img src={coverImage} alt="Capa do projeto" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-surface-container-highest">
                 <ImageIcon className="h-12 w-12 text-outline/30" />
@@ -221,6 +314,22 @@ export default function ProjectPage() {
                 {project.name}
               </h3>
             </div>
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverUploading}
+              className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-lg bg-black/45 px-3 py-2 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm transition-opacity hover:bg-black/60 disabled:opacity-60 md:opacity-0 md:group-hover:opacity-100"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {coverUploading ? 'Enviando...' : 'Alterar Capa'}
+            </button>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleCoverUpload}
+              className="hidden"
+            />
           </section>
 
           <section>
@@ -300,6 +409,26 @@ export default function ProjectPage() {
             <h4 className="mb-4 font-headline text-lg font-bold">Etapas</h4>
             <Timeline stages={project.stages} onToggleComplete={handleToggleStageComplete} />
           </section>
+
+          {project.is_active ? (
+            <Button
+              variant="secondary"
+              className="w-full border border-outline-variant/30"
+              onClick={handleCompleteProject}
+              disabled={completing}
+            >
+              {completing ? 'Concluindo...' : 'Marcar como Concluido'}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              className="w-full border border-outline-variant/30"
+              onClick={handleReactivateProject}
+              disabled={completing}
+            >
+              {completing ? 'Reativando...' : 'Reativar Projeto'}
+            </Button>
+          )}
 
           {!showRegister ? (
             <button
