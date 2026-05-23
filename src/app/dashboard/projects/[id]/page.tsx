@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Share2, X, Upload, MoreVertical, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Timeline } from '@/components/timeline'
 import { createClient } from '@/lib/supabase'
 import { sendUpdateNotification } from '@/lib/notifications'
 import type { Photo, Project, Stage, UpdateWithPhotos } from '@/lib/types'
@@ -492,6 +493,29 @@ export default function ProjectPage() {
         </div>
       )}
 
+      {project.end_date && project.is_active && progress < 100 && (() => {
+        const end = new Date(project.end_date)
+        const now = new Date()
+        const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        if (diffDays < 0) {
+          return (
+            <div className="mb-6 p-4 bg-error-container text-on-error-container rounded-lg text-sm flex items-center gap-2">
+              <span className="font-bold">Prazo vencido há {Math.abs(diffDays)} dias.</span>
+              <span>Progresso atual: {progress}%.</span>
+            </div>
+          )
+        }
+        if (diffDays <= 7) {
+          return (
+            <div className="mb-6 p-4 bg-warning/10 text-warning-foreground rounded-lg text-sm flex items-center gap-2 border border-warning/20">
+              <span className="font-bold">Faltam {diffDays} dias</span>
+              <span>para o prazo estimado ({new Date(project.end_date).toLocaleDateString('pt-BR')}). Progresso atual: {progress}%.</span>
+            </div>
+          )
+        }
+        return null
+      })()}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         <div className="col-span-1 lg:col-span-8 space-y-6 lg:space-y-8">
           <div>
@@ -745,6 +769,11 @@ export default function ProjectPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="p-6 lg:p-8 bg-surface-container-low rounded-xl border border-outline-variant/10 transition-all duration-300 hover:shadow-soft animate-fade-in-up">
+            <h4 className="font-headline text-lg font-bold mb-4">Etapas</h4>
+            <Timeline stages={project.stages} />
           </div>
 
           {!showRegister ? (

@@ -22,6 +22,7 @@ const navItems = [
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [officeName, setOfficeName] = useState('ObraSnap')
+  const [deadlines, setDeadlines] = useState<{ id: string; name: string; end_date: string; progress: number }[]>([])
   const pathname = usePathname()
   const router = useRouter()
 
@@ -39,6 +40,29 @@ export function Sidebar() {
         
         if (userData?.office_name) {
           setOfficeName(userData.office_name)
+        }
+
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id, name, end_date, stages(is_completed)')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .not('end_date', 'is', null)
+
+        if (projects) {
+          type Deadline = { id: string; name: string; end_date: string; progress: number }
+          const now = new Date()
+          const withProgress: Deadline[] = projects.map((p: any) => {
+            const stages = p.stages || []
+            const completed = stages.filter((s: any) => s.is_completed).length
+            const progress = stages.length > 0 ? Math.round((completed / stages.length) * 100) : 0
+            return { id: p.id, name: p.name, end_date: p.end_date, progress }
+          })
+          const sorted = withProgress
+            .filter(p => new Date(p.end_date) < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && p.progress < 100)
+            .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
+            .slice(0, 3)
+          setDeadlines(sorted)
         }
       }
     }
@@ -79,7 +103,7 @@ export function Sidebar() {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2">
+        <nav className="space-y-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href || 
               (item.href !== '/dashboard' && pathname.startsWith(item.href))
@@ -102,7 +126,39 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="mt-auto space-y-4">
+        {deadlines.length > 0 && (
+          <div className="mt-4 mb-2">
+            <p className="font-label text-[9px] uppercase tracking-widest text-outline mb-2 px-4">Prazos Próximos</p>
+            <div className="space-y-1">
+              {deadlines.map(p => {
+                const end = new Date(p.end_date)
+                const now = new Date()
+                const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+                const isOverdue = diffDays < 0
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/dashboard/projects/${p.id}`}
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-between px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors"
+                  >
+                    <div className="min-w-0 flex-1 mr-2">
+                      <p className="text-xs text-on-surface truncate">{p.name}</p>
+                      <p className="text-[10px] text-outline">{p.progress}% concluído</p>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${isOverdue ? 'bg-error/20 text-error' : 'bg-warning/20 text-warning-foreground'}`}>
+                      {isOverdue ? `${Math.abs(diffDays)}d` : `${diffDays}d`}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1" />
+        
+        <div className="space-y-4">
           <Link href="/dashboard/new" onClick={() => setIsOpen(false)}>
             <Button className="w-full bg-primary text-primary-foreground py-4 px-6 rounded-md font-bold text-[12px] tracking-widest uppercase flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
               <Plus className="w-[18px] h-[18px]" />

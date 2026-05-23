@@ -11,6 +11,8 @@ interface ProjectWithProgress extends Project {
   progress: number
   current_stage: string
   status: string
+  deadlineLabel: string
+  deadlineType: string
 }
 
 export default function DashboardPage() {
@@ -65,11 +67,28 @@ export default function DashboardPage() {
           else if (progress < 25) status = 'planejamento'
           else if (progress < 50) status = 'critico'
 
+          let deadlineLabel = ''
+          let deadlineType = ''
+          if (project.end_date && progress < 100) {
+            const end = new Date(project.end_date)
+            const now = new Date()
+            const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            if (diffDays < 0) {
+              deadlineLabel = `Vencido há ${Math.abs(diffDays)}d`
+              deadlineType = 'overdue'
+            } else if (diffDays <= 7) {
+              deadlineLabel = `Fecha em ${diffDays}d`
+              deadlineType = 'warning'
+            }
+          }
+
           return {
             ...project,
             progress,
             current_stage: currentStage,
             status,
+            deadlineLabel,
+            deadlineType,
           }
         })
 
@@ -244,14 +263,21 @@ export default function DashboardPage() {
                   {project.cover_image_url ? (
                     <img src={project.cover_image_url} alt="" className="relative w-full h-full object-cover z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
                   ) : null}
-                  <div className={`absolute top-3 lg:top-4 left-3 lg:left-4 ${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
-                    <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
-                    <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
-                      {project.status === 'emprogresso' && 'Em Progresso'}
-                      {project.status === 'planejamento' && 'Planejamento'}
-                      {project.status === 'finalizando' && 'Finalizando'}
-                      {project.status === 'critico' && 'Crítico'}
-                    </span>
+                  <div className="absolute top-3 lg:top-4 left-3 lg:left-4 flex items-center gap-2">
+                    <div className={`${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
+                      <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
+                      <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
+                        {project.status === 'emprogresso' && 'Em Progresso'}
+                        {project.status === 'planejamento' && 'Planejamento'}
+                        {project.status === 'finalizando' && 'Finalizando'}
+                        {project.status === 'critico' && 'Crítico'}
+                      </span>
+                    </div>
+                    {project.deadlineLabel && (
+                      <div className={`px-2 lg:px-3 py-1 rounded-full backdrop-blur-md flex items-center gap-1 ${project.deadlineType === 'overdue' ? 'bg-error/80 text-white' : 'bg-warning/80 text-warning-foreground'}`}>
+                        <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">{project.deadlineLabel}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2 lg:space-y-4">
