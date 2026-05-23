@@ -200,14 +200,24 @@ export default function DashboardPage() {
               critico: 'bg-error-container/80',
             }
             
+            const gradientColors: Record<string, string> = {
+              emprogresso: 'from-primary/80 to-secondary/60',
+              planejamento: 'from-tertiary/80 to-tertiary-container/60',
+              finalizando: 'from-secondary-fixed/80 to-secondary-fixed-dim/60',
+              critico: 'from-error/80 to-error-container/60',
+            }
+            
             return (
               <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer">
-                <div className="relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-surface-container-low">
+                <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]}`}>
+                  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                    <span className="text-[120px] lg:text-[180px] font-bold text-white/20 select-none">
+                      {project.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                   {project.cover_image_url ? (
-                    <img src={project.cover_image_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-surface-container-highest" />
-                  )}
+                    <img src={project.cover_image_url} alt="" className="relative w-full h-full object-cover z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                  ) : null}
                   <div className={`absolute top-3 lg:top-4 left-3 lg:left-4 ${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
                     <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
                     <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
