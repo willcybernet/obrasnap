@@ -434,8 +434,7 @@ export default function ProjectPage() {
     )
   }
   return (
-    <>
-      {/* ------------------- HEADER & ACTIONS ------------------- */}
+          {/* ------------------- HEADER & ACTIONS ------------------- */}
       <div className="mb-6 lg:mb-8 flex items-center justify-between">
         <Link href="/dashboard" className="inline-flex items-center gap-2 text-outline hover:text-on-surface transition-colors">
           <ArrowLeft className="w-4 h-4" />
