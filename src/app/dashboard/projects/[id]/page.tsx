@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Camera, Share2, X, Upload, MoreVertical, Edit, Trash2, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Camera, Share2, X, Upload, MoreVertical, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase'
@@ -47,11 +47,18 @@ export default function ProjectPage() {
   const [editUpdateNote, setEditUpdateNote] = useState('')
   const [editUpdateStage, setEditUpdateStage] = useState('')
   const [editUpdateSaving, setEditUpdateSaving] = useState(false)
+  const [editUpdateExistingPhotos, setEditUpdateExistingPhotos] = useState<any[]>([])
+  const [editUpdateNewPhotos, setEditUpdateNewPhotos] = useState<File[]>([])
+  const [editUpdateRemovePhotoIds, setEditUpdateRemovePhotoIds] = useState<string[]>([])
   const [filterStage, setFilterStage] = useState<string>('')
   const [completing, setCompleting] = useState(false)
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null)
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[]>([])
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const editFileInputRef = useRef<HTMLInputElement>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const loadProject = useCallback(async () => {
@@ -125,8 +132,8 @@ export default function ProjectPage() {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newPhotos = Array.from(e.target.files).slice(0, 3 - photos.length)
-      setPhotos(prev => [...prev, ...newPhotos].slice(0, 3))
+      const newPhotos = Array.from(e.target.files).slice(0, 6 - photos.length)
+      setPhotos(prev => [...prev, ...newPhotos].slice(0, 6))
     }
   }
 
@@ -285,12 +292,48 @@ export default function ProjectPage() {
     setEditingUpdate(update.id)
     setEditUpdateNote(update.note || '')
     setEditUpdateStage(update.stage_id || '')
+    setEditUpdateExistingPhotos(update.photos || [])
+    setEditUpdateNewPhotos([])
+    setEditUpdateRemovePhotoIds([])
+  }
+
+  const handleEditPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const remaining = 6 - editUpdateExistingPhotos.filter(p => !editUpdateRemovePhotoIds.includes(p.id)).length - editUpdateNewPhotos.length
+      const newPhotos = Array.from(e.target.files).slice(0, remaining)
+      setEditUpdateNewPhotos(prev => [...prev, ...newPhotos].slice(0, 6))
+    }
   }
 
   const handleSaveUpdateEdit = async (updateId: string) => {
     setEditUpdateSaving(true)
     try {
       const supabase = createClient()
+
+      if (editUpdateRemovePhotoIds.length > 0) {
+        const { data: photos } = await supabase
+          .from('photos')
+          .select('storage_path')
+          .in('id', editUpdateRemovePhotoIds)
+        if (photos && photos.length > 0) {
+          await supabase.storage.from('photos').remove(photos.map((p: any) => p.storage_path))
+        }
+        await supabase.from('photos').delete().in('id', editUpdateRemovePhotoIds)
+      }
+
+      for (const photo of editUpdateNewPhotos) {
+        const fileName = `${updateId}/${Date.now()}-${photo.name}`
+        const storagePath = `${projectId}/${fileName}`
+        const { error: uploadError } = await supabase.storage.from('photos').upload(storagePath, photo)
+        if (uploadError) throw uploadError
+        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
+        await supabase.from('photos').insert({
+          update_id: updateId,
+          storage_path: storagePath,
+          storage_url: urlData.publicUrl,
+        })
+      }
+
       const { error } = await supabase
         .from('updates')
         .update({
@@ -543,6 +586,51 @@ export default function ProjectPage() {
                         placeholder="Nota do registro..."
                         className="w-full bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 rounded-t-lg p-3 text-sm placeholder:text-outline/50 transition-all h-20 resize-none"
                       />
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-label text-[10px] uppercase tracking-widest text-outline">Fotos</span>
+                          <button
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-dim transition-colors"
+                          >
+                            {editUpdateExistingPhotos.filter(p => !editUpdateRemovePhotoIds.includes(p.id)).length + editUpdateNewPhotos.length}/6 Adicionar
+                          </button>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {editUpdateExistingPhotos
+                            .filter(p => !editUpdateRemovePhotoIds.includes(p.id))
+                            .map((photo: any) => (
+                              <div key={photo.id} className="relative w-16 h-16 rounded-lg overflow-hidden bg-surface-container-highest flex-shrink-0">
+                                <img src={photo.storage_url} alt="" className="w-full h-full object-cover" />
+                                <button
+                                  onClick={() => setEditUpdateRemovePhotoIds(prev => [...prev, photo.id])}
+                                  className="absolute top-0.5 right-0.5 bg-error/80 text-white rounded-full p-0.5"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          {editUpdateNewPhotos.map((file, i) => (
+                            <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden bg-surface-container-highest flex-shrink-0">
+                              <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => setEditUpdateNewPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                                className="absolute top-0.5 right-0.5 bg-error/80 text-white rounded-full p-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        ref={editFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleEditPhotoUpload}
+                        className="hidden"
+                      />
                       <div className="flex gap-2">
                         <Button
                           variant="secondary"
@@ -603,10 +691,16 @@ export default function ProjectPage() {
 
                       {update.photos && update.photos.length > 0 && (
                         <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2">
-                          {update.photos.map((photo: any) => (
+                          {update.photos.map((photo: any, photoIdx: number) => (
                             <div
                               key={photo.id}
-                              className="w-20 lg:w-24 h-20 lg:h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0"
+                              className="w-20 lg:w-24 h-20 lg:h-24 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                                const urls = update.photos.map((p: any) => p.storage_url)
+                                setLightboxPhotos(urls)
+                                setLightboxIndex(photoIdx)
+                                setLightboxPhoto(photo.storage_url)
+                              }}
                             >
                               <img
                                 src={photo.storage_url}
@@ -728,11 +822,11 @@ export default function ProjectPage() {
 
               {registerStep === 2 && (
                 <div className="space-y-4">
-                  <h2 className="font-headline text-lg lg:text-xl font-bold text-on-surface">Fotos (máximo 3)</h2>
+                  <h2 className="font-headline text-lg lg:text-xl font-bold text-on-surface">Fotos (máximo 6)</h2>
                   <p className="text-on-surface-variant text-sm">Registre o progresso visual.</p>
 
                   <div className="grid grid-cols-3 gap-2 lg:gap-3">
-                    {[0, 1, 2].map((i) => (
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
                       <div
                         key={i}
                         onClick={() => fileInputRef.current?.click()}
@@ -862,6 +956,49 @@ export default function ProjectPage() {
           )}
         </div>
       </div>
+
+      {lightboxPhoto && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightboxPhoto(null)}>
+          <button className="absolute top-4 right-4 text-white/80 hover:text-white z-10 p-2" onClick={() => setLightboxPhoto(null)}>
+            <X className="w-6 h-6" />
+          </button>
+          {lightboxPhotos.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const next = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length
+                  setLightboxIndex(next)
+                  setLightboxPhoto(lightboxPhotos[next])
+                }}
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 z-10"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const next = (lightboxIndex + 1) % lightboxPhotos.length
+                  setLightboxIndex(next)
+                  setLightboxPhoto(lightboxPhotos[next])
+                }}
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+                {lightboxIndex + 1} / {lightboxPhotos.length}
+              </div>
+            </>
+          )}
+          <img
+            src={lightboxPhoto}
+            alt=""
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
