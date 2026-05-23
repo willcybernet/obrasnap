@@ -205,7 +205,7 @@ npm run build
 3. ✅ ~~Implementar upload de fotos~~
 4. ✅ ~~Adicionar notificações por email~~
 5. ✅ ~~Implementar autenticação completa~~
-6. ✅ ~~Adicionar página de configurações do escritório
+6. ✅ ~~Adicionar página de configurações do escritório 
 
 ### Para finalizar:
 1. Criar projeto em https://supabase.com
