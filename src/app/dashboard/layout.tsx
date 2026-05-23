@@ -65,7 +65,7 @@ export default function DashboardLayout({
             </button>
           </div>
         </header>
-        <div className="px-4 lg:px-8 pt-6 md:pt-10 pb-16 lg:pb-24 max-w-7xl mx-auto">
+        <div className="px-4 pt-6 md:pt-10 pb-16 lg:pb-24 max-w-[1440px] mx-auto">
           {children}
         </div>
       </main>
