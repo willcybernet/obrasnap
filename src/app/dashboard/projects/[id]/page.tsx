@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Camera, Share2, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Camera, Edit, Share2, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from '@/components/timeline'
 import { createClient } from '@/lib/supabase'
@@ -20,6 +20,7 @@ export default function ProjectPage() {
   const projectId = params.id as string
   const fileInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const editFileInputRef = useRef<HTMLInputElement>(null)
 
   const [project, setProject] = useState<ProjectDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -33,6 +34,12 @@ export default function ProjectPage() {
   const [copied, setCopied] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
   const [completing, setCompleting] = useState(false)
+  const [editingUpdateId, setEditingUpdateId] = useState<string | null>(null)
+  const [editNote, setEditNote] = useState('')
+  const [editExistingPhotos, setEditExistingPhotos] = useState<Photo[]>([])
+  const [editRemovePhotoIds, setEditRemovePhotoIds] = useState<string[]>([])
+  const [editNewPhotos, setEditNewPhotos] = useState<File[]>([])
+  const [editSaving, setEditSaving] = useState(false)
 
   const loadProject = useCallback(async () => {
     try {
@@ -130,6 +137,83 @@ export default function ProjectPage() {
     } finally {
       setCoverUploading(false)
       event.target.value = ''
+    }
+  }
+
+  const startEditUpdate = (update: UpdateWithPhotos) => {
+    setEditingUpdateId(update.id)
+    setEditNote(update.note || '')
+    setEditExistingPhotos(update.photos || [])
+    setEditRemovePhotoIds([])
+    setEditNewPhotos([])
+  }
+
+  const cancelEditUpdate = () => {
+    setEditingUpdateId(null)
+    setEditNote('')
+    setEditExistingPhotos([])
+    setEditRemovePhotoIds([])
+    setEditNewPhotos([])
+  }
+
+  const handleEditPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files) return
+    const visibleExisting = editExistingPhotos.filter((photo) => !editRemovePhotoIds.includes(photo.id)).length
+    const remainingSlots = 6 - visibleExisting - editNewPhotos.length
+    const newFiles = Array.from(event.target.files).slice(0, Math.max(remainingSlots, 0))
+    setEditNewPhotos((current) => [...current, ...newFiles].slice(0, 6 - visibleExisting))
+    event.target.value = ''
+  }
+
+  const handleSaveUpdateEdit = async (updateId: string) => {
+    try {
+      setEditSaving(true)
+      setError('')
+
+      const supabase = createClient()
+
+      if (editRemovePhotoIds.length > 0) {
+        const photosToRemove = editExistingPhotos.filter((photo) => editRemovePhotoIds.includes(photo.id))
+        const storagePaths = photosToRemove.map((photo) => photo.storage_path)
+
+        if (storagePaths.length > 0) {
+          const { error: storageError } = await supabase.storage.from('photos').remove(storagePaths)
+          if (storageError) throw storageError
+        }
+
+        const { error: deleteError } = await supabase.from('photos').delete().in('id', editRemovePhotoIds)
+        if (deleteError) throw deleteError
+      }
+
+      for (const photo of editNewPhotos) {
+        const fileName = `${updateId}/${Date.now()}-${photo.name}`
+        const storagePath = `${projectId}/${fileName}`
+        const { error: uploadError } = await supabase.storage.from('photos').upload(storagePath, photo)
+        if (uploadError) throw uploadError
+
+        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
+        const { error: photoError } = await supabase.from('photos').insert({
+          update_id: updateId,
+          storage_path: storagePath,
+          storage_url: urlData.publicUrl,
+        })
+        if (photoError) throw photoError
+      }
+
+      const { error: updateError } = await supabase
+        .from('updates')
+        .update({ note: editNote || null })
+        .eq('id', updateId)
+
+      if (updateError) throw updateError
+
+      cancelEditUpdate()
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao editar registro:', err)
+      setError(err.message || 'Erro ao editar registro')
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -345,31 +429,122 @@ export default function ProjectPage() {
 
               {project.updates.map((update) => (
                 <article key={update.id} className="rounded-xl bg-surface-container-low p-4 lg:p-6">
-                  <div className="mb-3 flex items-center gap-2 lg:mb-4 lg:gap-3">
-                    <Camera className="h-4 w-4 text-outline lg:h-5 lg:w-5" />
-                    <span className="font-label text-[10px] uppercase tracking-widest text-outline">
-                      {new Date(update.created_at).toLocaleDateString('pt-BR')}
-                    </span>
-                    {update.stage && (
-                      <>
-                        <span className="text-outline">-</span>
-                        <span className="text-sm font-bold text-on-surface lg:text-base">{update.stage.name}</span>
-                      </>
+                  <div className="mb-3 flex items-start justify-between gap-3 lg:mb-4">
+                    <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+                      <Camera className="h-4 w-4 text-outline lg:h-5 lg:w-5" />
+                      <span className="font-label text-[10px] uppercase tracking-widest text-outline">
+                        {new Date(update.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      {update.stage && (
+                        <>
+                          <span className="text-outline">-</span>
+                          <span className="text-sm font-bold text-on-surface lg:text-base">{update.stage.name}</span>
+                        </>
+                      )}
+                    </div>
+                    {editingUpdateId !== update.id && (
+                      <button
+                        type="button"
+                        onClick={() => startEditUpdate(update)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-surface-container-highest px-3 py-1.5 text-xs font-bold text-on-surface transition-colors hover:bg-outline-variant/30"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
                     )}
                   </div>
 
-                  {update.note && (
-                    <p className="mb-3 text-sm text-on-surface-variant lg:mb-4 lg:text-base">{update.note}</p>
-                  )}
+                  {editingUpdateId === update.id ? (
+                    <div className="space-y-4">
+                      <textarea
+                        value={editNote}
+                        onChange={(event) => setEditNote(event.target.value)}
+                        placeholder="Nota do registro..."
+                        className="h-28 w-full resize-none rounded-t-lg border-none border-b-2 border-outline-variant bg-surface-container-lowest p-3 text-sm transition-all placeholder:text-outline/50 focus:border-primary focus:ring-0"
+                      />
 
-                  {update.photos && update.photos.length > 0 && (
-                    <div className="flex gap-2 overflow-x-auto pb-2 lg:gap-3">
-                      {update.photos.map((photo) => (
-                        <div key={photo.id} className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-container-highest lg:h-24 lg:w-24">
-                          <img src={photo.storage_url} alt="" className="h-full w-full object-cover" />
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-label text-[10px] font-bold uppercase tracking-widest text-outline">
+                            Fotos
+                          </span>
+                          <span className="text-xs text-on-surface-variant">
+                            {editExistingPhotos.filter((photo) => !editRemovePhotoIds.includes(photo.id)).length + editNewPhotos.length}/6
+                          </span>
                         </div>
-                      ))}
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                          {editExistingPhotos
+                            .filter((photo) => !editRemovePhotoIds.includes(photo.id))
+                            .map((photo) => (
+                              <div key={photo.id} className="relative aspect-square overflow-hidden rounded-lg bg-surface-container-highest">
+                                <img src={photo.storage_url} alt="" className="h-full w-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setEditRemovePhotoIds((current) => [...current, photo.id])}
+                                  className="absolute right-1 top-1 rounded-full bg-error p-0.5 text-white"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          {editNewPhotos.map((photo, index) => (
+                            <div key={`${photo.name}-${index}`} className="relative aspect-square overflow-hidden rounded-lg bg-surface-container-highest">
+                              <img src={URL.createObjectURL(photo)} alt="" className="h-full w-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setEditNewPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index))}
+                                className="absolute right-1 top-1 rounded-full bg-error p-0.5 text-white"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                          {editExistingPhotos.filter((photo) => !editRemovePhotoIds.includes(photo.id)).length + editNewPhotos.length < 6 && (
+                            <button
+                              type="button"
+                              onClick={() => editFileInputRef.current?.click()}
+                              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-outline-variant/30 bg-surface-container-lowest text-outline transition-colors hover:bg-surface-container-highest"
+                            >
+                              <Upload className="h-4 w-4" />
+                              <span className="font-label text-[8px] font-bold uppercase tracking-widest">Adicionar</span>
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          ref={editFileInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleEditPhotoUpload}
+                          className="hidden"
+                        />
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button variant="secondary" onClick={cancelEditUpdate} className="flex-1">
+                          Cancelar
+                        </Button>
+                        <Button onClick={() => handleSaveUpdateEdit(update.id)} disabled={editSaving} className="flex-1">
+                          {editSaving ? 'Salvando...' : 'Salvar'}
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {update.note && (
+                        <p className="mb-3 text-sm text-on-surface-variant lg:mb-4 lg:text-base">{update.note}</p>
+                      )}
+
+                      {update.photos && update.photos.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 lg:gap-3">
+                          {update.photos.slice(0, 6).map((photo) => (
+                            <div key={photo.id} className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-container-highest lg:h-24 lg:w-24">
+                              <img src={photo.storage_url} alt="" className="h-full w-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </article>
               ))}
