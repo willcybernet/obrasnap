@@ -261,7 +261,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="pt-2 lg:pt-4 border-t border-surface-container">
                     <div className="flex justify-between items-end mb-1 lg:mb-2">
-                      <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">{project.current_stage}</span>
+                      <div>
+                        <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">Andamento</span>
+                        <p className="text-[9px] text-outline mt-0.5">{project.current_stage}</p>
+                      </div>
                       <span className="font-headline text-lg lg:text-xl font-light">{project.progress}%</span>
                     </div>
                     <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">

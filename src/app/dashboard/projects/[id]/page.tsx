@@ -47,6 +47,8 @@ export default function ProjectPage() {
   const [editUpdateNote, setEditUpdateNote] = useState('')
   const [editUpdateStage, setEditUpdateStage] = useState('')
   const [editUpdateSaving, setEditUpdateSaving] = useState(false)
+  const [filterStage, setFilterStage] = useState<string>('')
+  const [completing, setCompleting] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -104,6 +106,14 @@ export default function ProjectPage() {
     : 0
   const incompleteStages = project?.stages.filter((s) => !s.is_completed) || []
   const latestPhoto = project?.cover_image_url || project?.updates.flatMap((update) => update.photos || [])[0]?.storage_url
+  const stageUpdates = project?.stages.map(stage => ({
+    ...stage,
+    updateCount: project.updates.filter(u => u.stage_id === stage.id).length
+  })) || []
+  const filteredUpdates = filterStage
+    ? project?.updates.filter(u => u.stage_id === filterStage) || []
+    : project?.updates || []
+  const stageNames = project?.stages.reduce((acc: Record<string, string>, s) => { acc[s.id] = s.name; return acc }, {}) || {}
 
   const handleStageToggle = (stageId: string) => {
     setSelectedStages(prev =>
@@ -335,6 +345,27 @@ export default function ProjectPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleCompleteProject = async () => {
+    if (!project) return
+    setCompleting(true)
+    try {
+      const supabase = createClient()
+      const now = new Date().toISOString()
+      for (const stage of project.stages) {
+        if (!stage.is_completed) {
+          await supabase.from('stages').update({ is_completed: true, completed_at: now }).eq('id', stage.id)
+        }
+      }
+      await supabase.from('projects').update({ is_active: false }).eq('id', projectId)
+      await loadProject()
+    } catch (err: any) {
+      console.error('Erro ao concluir projeto:', err)
+      setError(err.message || 'Erro ao concluir projeto')
+    } finally {
+      setCompleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -459,14 +490,35 @@ export default function ProjectPage() {
             <div className="flex items-center justify-between mb-4 lg:mb-6">
               <h3 className="font-headline text-lg lg:text-xl font-bold text-on-surface">Atualizações Recentes</h3>
             </div>
+
+            {project.stages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+                <button
+                  onClick={() => setFilterStage('')}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${!filterStage ? 'bg-primary text-primary-foreground' : 'bg-surface-container text-outline hover:bg-surface-container-highest'}`}
+                >
+                  Todas
+                </button>
+                {stageUpdates.filter(s => s.updateCount > 0).map(stage => (
+                  <button
+                    key={stage.id}
+                    onClick={() => setFilterStage(stage.id)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${filterStage === stage.id ? 'bg-primary text-primary-foreground' : 'bg-surface-container text-outline hover:bg-surface-container-highest'}`}
+                  >
+                    {stage.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="space-y-4 lg:space-y-6">
-              {project.updates.length === 0 && (
+              {filteredUpdates.length === 0 && (
                 <div className="bg-surface-container-low rounded-xl p-6 text-sm text-on-surface-variant">
-                  Nenhum registro foi adicionado a este projeto ainda.
+                  Nenhum registro encontrado para esta etapa.
                 </div>
               )}
 
-              {project.updates.map((update) => (
+              {filteredUpdates.map((update) => (
                 <div key={update.id} className="bg-surface-container-low rounded-xl p-4 lg:p-6">
                   {editingUpdate === update.id ? (
                     <div className="space-y-3">
@@ -766,6 +818,31 @@ export default function ProjectPage() {
             <Share2 className="w-4 h-4 mr-2" />
             {copied ? 'Link Copiado!' : 'Compartilhar'}
           </Button>
+
+          {stageUpdates.filter(s => s.updateCount > 0).length > 0 && (
+            <div className="bg-surface-container-low rounded-xl p-4 lg:p-6 border border-outline-variant/10">
+              <h4 className="font-label text-[10px] uppercase tracking-widest text-outline font-semibold mb-3">Registros por Etapa</h4>
+              <div className="space-y-2">
+                {stageUpdates.filter(s => s.updateCount > 0).map(stage => (
+                  <div key={stage.id} className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-on-surface">{stage.name}</span>
+                    <span className="text-xs font-bold text-outline bg-surface-container-highest px-2 py-0.5 rounded-full">{stage.updateCount}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {project.is_active && progress > 0 && (
+            <Button
+              variant="secondary"
+              className="w-full border border-outline-variant/30 text-sm"
+              onClick={handleCompleteProject}
+              disabled={completing}
+            >
+              {completing ? 'Concluindo...' : 'Marcar como Concluído'}
+            </Button>
+          )}
         </div>
       </div>
 
