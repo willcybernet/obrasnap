@@ -18,6 +18,7 @@
 
     --primary: #5f5e5e;
     --primary-foreground: #ffffff;
+    --primary-dim: #4a4949;
 
     --secondary: #f4f4f4;
     --secondary-foreground: #1a1a1a;
@@ -50,6 +51,7 @@
     /* Material Design 3 - Surface & State */
     --surface-container-low: #f4f4f4;
     --surface-container: #e8e8e8;
+    --surface-container-high: #e0e2dc;
     --surface-container-highest: #e0e4db;
     --surface-container-lowest: #ffffff;
 
@@ -85,6 +87,7 @@
 
     --primary: #a8a6a6;
     --primary-foreground: #1a1a1a;
+    --primary-dim: #8a8888;
 
     --secondary: #2a2a2a;
     --secondary-foreground: #faf9f5;
@@ -117,6 +120,7 @@
     /* Material Design 3 - Surface & State (Dark) */
     --surface-container-low: #242424;
     --surface-container: #2a2a2a;
+    --surface-container-high: #303030;
     --surface-container-highest: #333333;
     --surface-container-lowest: #1a1a1a;
 

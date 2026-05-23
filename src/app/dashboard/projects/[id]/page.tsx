@@ -626,7 +626,7 @@ export default function ProjectPage() {
         </div>
 
         <div className="col-span-1 lg:col-span-4 space-y-4 lg:space-y-6">
-          <div className="p-6 lg:p-8 bg-surface-container-low rounded-xl border border-outline-variant/10">
+          <div className="p-6 lg:p-8 bg-surface-container-low rounded-xl border border-outline-variant/10 transition-all duration-300 hover:shadow-soft hover:-translate-y-0.5 animate-fade-in-up">
             <h4 className="font-headline text-lg font-bold mb-4">Métricas</h4>
             <div className="space-y-4 lg:space-y-6">
               <div className="flex items-center justify-between">
@@ -819,8 +819,8 @@ export default function ProjectPage() {
             {copied ? 'Link Copiado!' : 'Compartilhar'}
           </Button>
 
-          {stageUpdates.filter(s => s.updateCount > 0).length > 0 && (
-            <div className="bg-surface-container-low rounded-xl p-4 lg:p-6 border border-outline-variant/10">
+            {stageUpdates.filter(s => s.updateCount > 0).length > 0 && (
+            <div className="bg-surface-container-low rounded-xl p-4 lg:p-6 border border-outline-variant/10 transition-all duration-300 hover:shadow-soft animate-fade-in-up">
               <h4 className="font-label text-[10px] uppercase tracking-widest text-outline font-semibold mb-3">Registros por Etapa</h4>
               <div className="space-y-2">
                 {stageUpdates.filter(s => s.updateCount > 0).map(stage => (

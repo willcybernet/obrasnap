@@ -89,10 +89,10 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setIsOpen(false)}
-                className={`flex items-center gap-4 px-4 py-3 transition-all duration-200 opacity-90 hover:opacity-100 ${
+                className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 ${
                   isActive
-                    ? 'bg-surface-container text-on-background font-bold'
-                    : 'text-primary hover:bg-surface-container'
+                    ? 'bg-surface-container text-on-background font-bold shadow-soft'
+                    : 'text-outline hover:bg-surface-container-low hover:text-on-surface hover:shadow-soft'
                 }`}
               >
                 <item.icon className="w-5 h-5" />

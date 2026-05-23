@@ -11,15 +11,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         className={cn(
-          'inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+          'inline-flex items-center justify-center rounded-md font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
           {
-            // Primary - Steel gradient
-            'bg-primary text-primary-foreground hover:bg-primary-dim shadow-sm':
+            // Primary
+            'bg-primary text-primary-foreground hover:bg-primary-dim hover:shadow-soft active:scale-[0.97]':
               variant === 'primary',
-            // Secondary - Surface container highest
-            'bg-surface-container-highest text-foreground hover:bg-surface-container-high':
+            // Secondary
+            'bg-surface-container-highest text-foreground hover:bg-surface-container-high hover:shadow-soft active:scale-[0.97]':
               variant === 'secondary',
-            // Tertiary - Text only with hover underline
+            // Tertiary
             'text-primary hover:text-primary-dim hover:underline underline-offset-4':
               variant === 'tertiary',
             // Ghost

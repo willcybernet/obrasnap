@@ -169,12 +169,12 @@ export default function DashboardPage() {
       )}
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-8 mb-12 lg:mb-20">
-        <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-surface-container border border-outline-variant/10">
+        <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-surface-container hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '0ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Ativos</span>
           <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter">{activeProjects.length}</span>
         </div>
         
-        <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-surface-container border border-outline-variant/10">
+        <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-surface-container hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Em Atraso</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-error">{delayedProjects.length}</span>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        <div className="bg-tertiary-container p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-tertiary-fixed-dim border border-outline-variant/10">
+        <div className="bg-tertiary-container p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-tertiary-fixed-dim hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-on-tertiary-container">Eficiência</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-tertiary-container">{avgEfficiency}%</span>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        <div className="bg-surface-container-highest p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all hover:bg-outline-variant/20 border border-outline-variant/10">
+        <div className="bg-surface-container-highest p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-outline-variant/20 hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-on-surface">Concluídos</span>
           <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-surface">{completedProjects.length}</span>
         </div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
         </section>
       ) : (
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
-          {projects.map((project) => {
+          {projects.map((project, idx) => {
             const statusColors: Record<string, string> = {
               emprogresso: 'bg-primary',
               planejamento: 'bg-on-tertiary-container',
@@ -234,8 +234,8 @@ export default function DashboardPage() {
             }
             
             return (
-              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer">
-                <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]}`}>
+              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]} transition-all duration-300 group-hover:shadow-lift group-hover:-translate-y-1`}>
                   <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
                     <span className="text-[120px] lg:text-[180px] font-bold text-white/20 select-none">
                       {project.name.charAt(0).toUpperCase()}
@@ -276,7 +276,7 @@ export default function DashboardPage() {
             )
           })}
 
-          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all hover:bg-surface-container-low hover:border-primary/40 min-h-[280px] lg:min-h-[420px]">
+          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all duration-300 hover:bg-surface-container-low hover:border-primary/40 hover:shadow-soft hover:-translate-y-0.5 min-h-[280px] lg:min-h-[420px] animate-fade-in-up" style={{ animationDelay: `${projects.length * 80}ms` }}>
             <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
               <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
             </div>
