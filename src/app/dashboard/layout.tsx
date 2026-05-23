@@ -42,7 +42,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <Sidebar />
       <main className="lg:ml-72 min-h-screen">
-        <header className="flex items-center w-full px-4 md:px-8 lg:px-16 h-20 sticky top-0 z-40 bg-surface-container-low">
+        <header className="flex items-center w-full px-4 lg:px-8 h-20 sticky top-0 z-40 bg-background border-b border-outline-variant/10">
           <div className="flex-1" />
           <div className="relative hidden md:flex items-center bg-surface-container rounded-full px-4 py-2 w-72 lg:w-96">
             <Search className="text-outline w-5 h-5 shrink-0" />
@@ -65,7 +65,7 @@ export default function DashboardLayout({
             </button>
           </div>
         </header>
-        <div className="px-4 md:px-8 lg:px-16 pt-8 md:pt-12 pb-16 lg:pb-24 max-w-7xl mx-auto">
+        <div className="px-4 lg:px-8 pt-6 md:pt-10 pb-16 lg:pb-24 max-w-7xl mx-auto">
           {children}
         </div>
       </main>
