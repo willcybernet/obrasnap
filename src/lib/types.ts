@@ -33,8 +33,6 @@ export interface Stage {
   project_id: string
   name: string
   order_index: number
-  start_date: string | null
-  end_date: string | null
   is_completed: boolean
   completed_at: string | null
   created_at: string

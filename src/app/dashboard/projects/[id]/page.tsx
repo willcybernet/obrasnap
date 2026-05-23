@@ -401,6 +401,30 @@ export default function ProjectPage() {
     await loadProject()
   }
 
+  const handleToggleStageComplete = async (stageId: string) => {
+    const supabase = createClient()
+    const stage = project?.stages.find(s => s.id === stageId)
+    if (!stage) return
+    const newCompleted = !stage.is_completed
+    await supabase.from('stages').update({
+      is_completed: newCompleted,
+      completed_at: newCompleted ? new Date().toISOString() : null
+    }).eq('id', stageId)
+    await loadProject()
+  }
+
+  const handleUpdateStageDate = async (stageId: string, startDate: string | null, endDate: string | null) => {
+    const supabase = createClient()
+    const updates: Record<string, string | null> = {}
+    if (startDate !== null) updates.start_date = startDate
+    else updates.start_date = null
+    if (endDate !== null) updates.end_date = endDate
+    else updates.end_date = null
+    const { error } = await supabase.from('stages').update(updates).eq('id', stageId)
+    if (error) throw error
+    await loadProject()
+  }
+
   const handleCompleteProject = async () => {
     if (!project) return
     setCompleting(true)
