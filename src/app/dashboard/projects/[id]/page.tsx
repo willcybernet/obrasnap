@@ -843,6 +843,23 @@ export default function ProjectPage() {
               {completing ? 'Concluindo...' : 'Marcar como Concluído'}
             </Button>
           )}
+          {!project.is_active && (
+            <Button
+              variant="secondary"
+              className="w-full border border-outline-variant/30 text-sm"
+              onClick={async () => {
+                try {
+                  const supabase = createClient()
+                  await supabase.from('projects').update({ is_active: true }).eq('id', projectId)
+                  await loadProject()
+                } catch (err: any) {
+                  setError(err.message || 'Erro ao reativar projeto')
+                }
+              }}
+            >
+              Reativar Projeto
+            </Button>
+          )}
         </div>
       </div>
 

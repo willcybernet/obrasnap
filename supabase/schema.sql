@@ -87,6 +87,10 @@ CREATE POLICY "users_select_own" ON public.users
 CREATE POLICY "users_update_own" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
+-- Acesso público para página compartilhada
+CREATE POLICY "users_select_public" ON public.users
+  FOR SELECT USING (true);
+
 -- Policies para Projects
 CREATE POLICY "projects_select_own" ON public.projects
   FOR SELECT USING (user_id = auth.uid());

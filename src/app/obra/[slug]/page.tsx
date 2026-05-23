@@ -26,7 +26,7 @@ export default function PublicProjectPage() {
       
       const { data: projectData } = await supabase
         .from('projects')
-        .select('*, users!inner(office_name, logo_url, primary_color)')
+        .select('*, users(office_name, logo_url, primary_color)')
         .eq('public_slug', slug)
         .single()
       
