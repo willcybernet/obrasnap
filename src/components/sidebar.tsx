@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
+  Archive,
   Building2, 
   Settings,
   Plus,
@@ -23,6 +24,7 @@ export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [officeName, setOfficeName] = useState('ObraSnap')
   const [deadlines, setDeadlines] = useState<{ id: string; name: string; end_date: string; progress: number }[]>([])
+  const [archivedProjects, setArchivedProjects] = useState<{ id: string; name: string }[]>([])
   const pathname = usePathname()
   const router = useRouter()
 
@@ -63,6 +65,17 @@ export function Sidebar() {
             .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
             .slice(0, 3)
           setDeadlines(sorted)
+        }
+
+        const { data: archived } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('is_active', false)
+          .order('updated_at', { ascending: false })
+
+        if (archived) {
+          setArchivedProjects(archived)
         }
       }
     }
@@ -152,6 +165,25 @@ export function Sidebar() {
                   </Link>
                 )
               })}
+            </div>
+          </div>
+        )}
+
+        {archivedProjects.length > 0 && (
+          <div className="mt-4 mb-2">
+            <p className="font-label text-[9px] uppercase tracking-widest text-outline mb-2 px-4">Projetos Arquivados</p>
+            <div className="space-y-1">
+              {archivedProjects.map(project => (
+                <Link
+                  key={project.id}
+                  href={`/dashboard/projects/${project.id}`}
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 rounded-lg text-outline hover:bg-surface-container-low hover:text-on-surface transition-colors"
+                >
+                  <Archive className="w-4 h-4 shrink-0" />
+                  <span className="text-xs truncate">{project.name}</span>
+                </Link>
+              ))}
             </div>
           </div>
         )}
