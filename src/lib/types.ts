@@ -9,9 +9,20 @@ export interface User {
   updated_at: string
 }
 
+export interface Client {
+  id: string
+  user_id: string
+  name: string
+  email: string | null
+  phone: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Project {
   id: string
   user_id: string
+  client_id: string | null
   name: string
   address: string | null
   client_name: string | null
@@ -26,6 +37,7 @@ export interface Project {
   office_name?: string | null
   logo_url?: string | null
   primary_color?: string | null
+  client?: Client | null
 }
 
 export interface Stage {

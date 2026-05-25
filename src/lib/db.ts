@@ -19,6 +19,7 @@ export async function createProject(
     address?: string
     client_name?: string
     client_email?: string
+    client_id?: string | null
     start_date?: string
     end_date?: string
   }
@@ -34,6 +35,7 @@ export async function createProject(
       address: data.address,
       client_name: data.client_name,
       client_email: data.client_email,
+      client_id: data.client_id || null,
       start_date: data.start_date,
       end_date: data.end_date,
       public_slug: publicSlug,
@@ -69,7 +71,7 @@ export async function getProjects(userId: string) {
 
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, client:clients(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
@@ -82,7 +84,7 @@ export async function getProjectById(projectId: string) {
 
   const { data: project, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, client:clients(*)')
     .eq('id', projectId)
     .single()
 
@@ -95,7 +97,7 @@ export async function getProjectBySlug(slug: string) {
 
   const { data: project, error } = await supabase
     .from('projects')
-    .select('*')
+    .select('*, client:clients(*)')
     .eq('public_slug', slug)
     .single()
 
@@ -309,4 +311,74 @@ export async function uploadProjectCover(
   await updateProject(projectId, { cover_image_url: publicUrl })
 
   return publicUrl
+}
+
+export async function getClients(userId: string) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*, projects(id, is_active)')
+    .eq('user_id', userId)
+    .order('name', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export async function createClientDb(
+  userId: string,
+  data: {
+    name: string
+    email?: string | null
+    phone?: string | null
+  }
+) {
+  const supabase = createClient()
+
+  const { data: client, error } = await supabase
+    .from('clients')
+    .insert({
+      user_id: userId,
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return client
+}
+
+export async function updateClientDb(
+  clientId: string,
+  updates: {
+    name?: string
+    email?: string | null
+    phone?: string | null
+  }
+) {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('clients')
+    .update(updates)
+    .eq('id', clientId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function deleteClientDb(clientId: string) {
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+
+  if (error) throw error
 }

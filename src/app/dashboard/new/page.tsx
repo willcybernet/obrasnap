@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase'
+import { getClients, createClientDb } from '@/lib/db'
 import { DEFAULT_STAGES } from '@/lib/types'
+import type { Client } from '@/lib/types'
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -17,11 +19,77 @@ export default function NewProjectPage() {
   
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
-  const [clientName, setClientName] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [useTemplate, setUseTemplate] = useState(true)
+  
+  // Clients state
+  const [clients, setClients] = useState<Client[]>([])
+  const [selectedClientId, setSelectedClientId] = useState('')
+  const [clientsLoading, setClientsLoading] = useState(true)
+  
+  // Modal for inline client creation
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+  const [newClientName, setNewClientName] = useState('')
+  const [newClientEmail, setNewClientEmail] = useState('')
+  const [newClientPhone, setNewClientPhone] = useState('')
+  const [clientSaving, setClientSaving] = useState(false)
+  const [clientError, setClientError] = useState('')
+
+  const loadClients = async () => {
+    try {
+      setClientsLoading(true)
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const data = await getClients(user.id)
+        setClients(data)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar clientes:', err)
+    } finally {
+      setClientsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadClients()
+  }, [])
+
+  const handleCreateClientInline = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newClientName.trim()) return
+
+    try {
+      setClientSaving(true)
+      setClientError('')
+
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Não autenticado')
+
+      const newClient = await createClientDb(user.id, {
+        name: newClientName.trim(),
+        email: newClientEmail.trim() || null,
+        phone: newClientPhone.trim() || null,
+      })
+
+      // Add to local state and select it
+      setClients(prev => [...prev, newClient].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedClientId(newClient.id)
+
+      // Reset & Close
+      setNewClientName('')
+      setNewClientEmail('')
+      setNewClientPhone('')
+      setIsClientModalOpen(false)
+    } catch (err: any) {
+      console.error('Erro ao cadastrar cliente:', err)
+      setClientError(err.message || 'Erro ao cadastrar cliente. Tente novamente.')
+    } finally {
+      setClientSaving(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,6 +109,8 @@ export default function NewProjectPage() {
         return
       }
 
+      const selectedClient = clients.find(c => c.id === selectedClientId)
+
       console.log('Criando projeto para usuário:', user.id)
 
       const timestamp = Date.now().toString(36)
@@ -54,8 +124,9 @@ export default function NewProjectPage() {
           user_id: user.id,
           name,
           address,
-          client_name: clientName || null,
-          client_email: clientEmail || null,
+          client_id: selectedClientId || null,
+          client_name: selectedClient ? selectedClient.name : null,
+          client_email: selectedClient ? selectedClient.email : null,
           start_date: startDate || null,
           end_date: endDate || null,
           public_slug: slug,
@@ -127,7 +198,7 @@ export default function NewProjectPage() {
             Criar Projeto
           </h2>
           <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
-            Preencha as informações básicas do projeto.
+            Preencha as informações básicas do projeto e selecione ou cadastre o cliente.
           </p>
         </div>
 
@@ -201,30 +272,33 @@ export default function NewProjectPage() {
             <h3 className="font-headline text-lg lg:text-xl font-bold text-on-surface">Cliente</h3>
             
             <div className="space-y-2">
-              <label htmlFor="clientName" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
-                Nome do Cliente
+              <label htmlFor="clientId" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
+                Selecionar Cliente
               </label>
-              <Input
-                id="clientName"
-                placeholder="João Silva"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="h-12 lg:h-14 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="clientEmail" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
-                Email do Cliente
-              </label>
-              <Input
-                id="clientEmail"
-                type="email"
-                placeholder="joao@email.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                className="h-12 lg:h-14 bg-surface-container-low border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
-              />
+              <div className="flex gap-2">
+                <div className="flex-1 relative bg-surface-container-low rounded-t-lg border-b-2 border-outline-variant focus-within:border-primary px-3 py-1.5 flex flex-col justify-center">
+                  <select
+                    id="clientId"
+                    value={selectedClientId}
+                    onChange={(e) => setSelectedClientId(e.target.value)}
+                    disabled={clientsLoading}
+                    className="bg-transparent border-none p-0 focus:ring-0 text-sm font-semibold text-on-surface outline-none cursor-pointer w-full"
+                  >
+                    <option value="">Sem cliente associado</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setIsClientModalOpen(true)}
+                  className="bg-surface-container-low text-on-surface border border-outline-variant/30 hover:bg-surface-container h-12 lg:h-14 px-4 flex items-center justify-center gap-1.5 rounded-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Criar Novo</span>
+                </Button>
+              </div>
             </div>
           </section>
 
@@ -289,6 +363,92 @@ export default function NewProjectPage() {
           </div>
         </form>
       </div>
+
+      {/* Modal - Novo Cliente Inline */}
+      {isClientModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm animate-fade-in">
+          <div className="bg-background rounded-2xl w-full max-w-md p-6 lg:p-8 border border-outline-variant/10 shadow-lift flex flex-col relative animate-fade-in-up">
+            <button 
+              onClick={() => setIsClientModalOpen(false)}
+              className="absolute top-4 right-4 text-outline hover:text-on-background transition-colors p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="mb-6">
+              <h3 className="font-headline text-xl lg:text-2xl font-bold tracking-tight text-on-background">Novo Cliente</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Cadastre o cliente para associá-lo ao novo projeto.</p>
+            </div>
+
+            <form onSubmit={handleCreateClientInline} className="space-y-4">
+              {clientError && (
+                <div className="p-3 bg-error-container text-on-error-container rounded-lg text-xs">
+                  {clientError}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label htmlFor="modal-name" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
+                  Nome Completo *
+                </label>
+                <Input
+                  id="modal-name"
+                  placeholder="Nome do cliente"
+                  value={newClientName}
+                  onChange={(e) => setNewClientName(e.target.value)}
+                  required
+                  className="h-11 bg-surface-container border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="modal-email" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
+                  E-mail
+                </label>
+                <Input
+                  id="modal-email"
+                  type="email"
+                  placeholder="cliente@email.com"
+                  value={newClientEmail}
+                  onChange={(e) => setNewClientEmail(e.target.value)}
+                  className="h-11 bg-surface-container border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="modal-phone" className="font-label text-[10px] uppercase tracking-widest text-outline ml-1">
+                  Telefone
+                </label>
+                <Input
+                  id="modal-phone"
+                  placeholder="(11) 99999-9999"
+                  value={newClientPhone}
+                  onChange={(e) => setNewClientPhone(e.target.value)}
+                  className="h-11 bg-surface-container border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsClientModalOpen(false)}
+                  className="flex-1 h-11 font-bold tracking-widest uppercase text-[10px]"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={clientSaving}
+                  className="flex-1 h-11 bg-primary text-primary-foreground font-bold tracking-widest uppercase text-[10px]"
+                >
+                  {clientSaving ? 'Salvando...' : 'Cadastrar'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, HardHat } from 'lucide-react'
+import { Plus, HardHat, LayoutDashboard, FolderOpen, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { Project } from '@/lib/types'
 
@@ -159,17 +159,36 @@ export default function DashboardPage() {
 
   return (
     <>
-      <section className="mb-12 lg:mb-20">
-        <div className="flex flex-col gap-2">
-          <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">ObraSnap • Dashboard</span>
-          <h2 className="font-headline text-3xl lg:text-6xl tracking-tighter text-on-background font-medium">Meus Projetos</h2>
-          <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
-            {activeProjects.length > 0 ? (
-              <>Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.</>
-            ) : (
-              <>Você ainda não tem obras cadastradas. Comece criando seu primeiro projeto!</>
-            )}
-          </p>
+      <section className="mb-8 lg:mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">ObraSnap • Dashboard</span>
+            <h2 className="font-headline text-3xl lg:text-6xl tracking-tighter text-on-background font-medium">Dashboard</h2>
+            <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
+              {activeProjects.length > 0 ? (
+                <>Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.</>
+              ) : (
+                <>Você ainda não tem obras cadastradas. Comece criando seu primeiro projeto!</>
+              )}
+            </p>
+          </div>
+          {/* Atalhos rápidos */}
+          <div className="flex items-center gap-3 pb-1">
+            <Link
+              href="/dashboard/projects"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container text-on-surface text-xs font-bold uppercase tracking-widest hover:bg-surface-container-high transition-colors border border-outline-variant/10"
+            >
+              <FolderOpen className="w-4 h-4" />
+              Todos os Projetos
+            </Link>
+            <Link
+              href="/dashboard/clients"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container text-on-surface text-xs font-bold uppercase tracking-widest hover:bg-surface-container-high transition-colors border border-outline-variant/10"
+            >
+              <Users className="w-4 h-4" />
+              Clientes
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -228,86 +247,105 @@ export default function DashboardPage() {
           </Link>
         </section>
       ) : (
-        <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
-          {activeProjects.map((project, idx) => {
-            const statusColors: Record<string, string> = {
-              emprogresso: 'bg-primary',
-              planejamento: 'bg-on-tertiary-container',
-              finalizando: 'bg-on-secondary-fixed',
-              critico: 'bg-on-error-container',
-            }
-            const bgColors: Record<string, string> = {
-              emprogresso: 'bg-white/80',
-              planejamento: 'bg-tertiary-container/80',
-              finalizando: 'bg-secondary-fixed-dim/80',
-              critico: 'bg-error-container/80',
-            }
-            
-            const gradientColors: Record<string, string> = {
-              emprogresso: 'from-primary/80 to-secondary/60',
-              planejamento: 'from-tertiary/80 to-tertiary-container/60',
-              finalizando: 'from-secondary-fixed/80 to-secondary-fixed-dim/60',
-              critico: 'from-error/80 to-error-container/60',
-            }
-            
-            return (
-              <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
-                <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]} transition-all duration-300 group-hover:shadow-lift group-hover:-translate-y-1`}>
-                  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
-                    <span className="text-[120px] lg:text-[180px] font-bold text-white/20 select-none">
-                      {project.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  {project.cover_image_url ? (
-                    <img src={project.cover_image_url} alt="" className="relative w-full h-full object-cover z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-                  ) : null}
-                  <div className="absolute top-3 lg:top-4 left-3 lg:left-4 flex items-center gap-2">
-                    <div className={`${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
-                      <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
-                      <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
-                        {project.status === 'emprogresso' && 'Em Progresso'}
-                        {project.status === 'planejamento' && 'Planejamento'}
-                        {project.status === 'finalizando' && 'Finalizando'}
-                        {project.status === 'critico' && 'Crítico'}
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-headline text-lg font-bold text-on-background">Obras Ativas</h3>
+            <Link
+              href="/dashboard/projects"
+              className="text-xs font-bold uppercase tracking-widest text-outline hover:text-on-surface transition-colors"
+            >
+              Ver todos os projetos →
+            </Link>
+          </div>
+
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
+            {activeProjects.map((project, idx) => {
+              const statusColors: Record<string, string> = {
+                emprogresso: 'bg-primary',
+                planejamento: 'bg-on-tertiary-container',
+                finalizando: 'bg-on-secondary-fixed',
+                critico: 'bg-on-error-container',
+              }
+              const bgColors: Record<string, string> = {
+                emprogresso: 'bg-white/80',
+                planejamento: 'bg-tertiary-container/80',
+                finalizando: 'bg-secondary-fixed-dim/80',
+                critico: 'bg-error-container/80',
+              }
+              
+              const gradientColors: Record<string, string> = {
+                emprogresso: 'from-primary/80 to-secondary/60',
+                planejamento: 'from-tertiary/80 to-tertiary-container/60',
+                finalizando: 'from-secondary-fixed/80 to-secondary-fixed-dim/60',
+                critico: 'from-error/80 to-error-container/60',
+              }
+              
+              return (
+                <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                  <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]} transition-all duration-300 group-hover:shadow-lift group-hover:-translate-y-1`}>
+                    <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                      <span className="text-[120px] lg:text-[180px] font-bold text-white/20 select-none">
+                        {project.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    {project.deadlineLabel && (
-                      <div className={`px-2 lg:px-3 py-1 rounded-full backdrop-blur-md flex items-center gap-1 ${project.deadlineType === 'overdue' ? 'bg-error/80 text-white' : 'bg-warning/80 text-warning-foreground'}`}>
-                        <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">{project.deadlineLabel}</span>
+                    {project.cover_image_url ? (
+                      <img src={project.cover_image_url} alt="" className="relative w-full h-full object-cover z-10" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
+                    ) : null}
+                    <div className="absolute top-3 lg:top-4 left-3 lg:left-4 flex items-center gap-2">
+                      <div className={`${bgColors[project.status]} backdrop-blur-md px-2 lg:px-3 py-1 rounded-full flex items-center gap-1 lg:gap-2`}>
+                        <span className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${statusColors[project.status]} animate-pulse`}></span>
+                        <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
+                          {project.status === 'emprogresso' && 'Em Progresso'}
+                          {project.status === 'planejamento' && 'Planejamento'}
+                          {project.status === 'finalizando' && 'Finalizando'}
+                          {project.status === 'critico' && 'Crítico'}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2 lg:space-y-4">
-                  <div>
-                    <span className="font-label text-[10px] uppercase tracking-widest text-outline">{project.address || 'Sem endereço'}</span>
-                    <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight">{project.name}</h3>
-                  </div>
-                  <div className="pt-2 lg:pt-4 border-t border-surface-container">
-                    <div className="flex justify-between items-end mb-1 lg:mb-2">
-                      <div>
-                        <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">Andamento</span>
-                        <p className="text-[9px] text-outline mt-0.5">{project.current_stage}</p>
-                      </div>
-                      <span className="font-headline text-lg lg:text-xl font-light">{project.progress}%</span>
-                    </div>
-                    <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
-                      <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
+                      {project.deadlineLabel && (
+                        <div className={`px-2 lg:px-3 py-1 rounded-full backdrop-blur-md flex items-center gap-1 ${project.deadlineType === 'overdue' ? 'bg-error/80 text-white' : 'bg-warning/80 text-warning-foreground'}`}>
+                          <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">{project.deadlineLabel}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </Link>
-            )
-          })}
+                  <div className="space-y-2 lg:space-y-4">
+                    <div>
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="font-label text-[10px] uppercase tracking-widest text-outline truncate flex-1">{project.address || 'Sem endereço'}</span>
+                        {(project as any).client && (
+                          <span className="font-label text-[9px] uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded text-on-surface font-semibold max-w-[120px] truncate shrink-0">
+                            👤 {(project as any).client.name}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight mt-1">{project.name}</h3>
+                    </div>
+                    <div className="pt-2 lg:pt-4 border-t border-surface-container">
+                      <div className="flex justify-between items-end mb-1 lg:mb-2">
+                        <div>
+                          <span className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">Andamento</span>
+                          <p className="text-[9px] text-outline mt-0.5">{project.current_stage}</p>
+                        </div>
+                        <span className="font-headline text-lg lg:text-xl font-light">{project.progress}%</span>
+                      </div>
+                      <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
+                        <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
 
-          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all duration-300 hover:bg-surface-container-low hover:border-primary/40 hover:shadow-soft hover:-translate-y-0.5 min-h-[280px] lg:min-h-[420px] animate-fade-in-up" style={{ animationDelay: `${activeProjects.length * 80}ms` }}>
-            <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
-              <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
-            </div>
-            <h4 className="font-headline text-lg lg:text-xl font-bold tracking-tight text-on-background">Novo Projeto</h4>
-            <p className="text-sm text-on-surface-variant text-center mt-2 max-w-[200px]">Inicie uma nova jornada de construção agora.</p>
-          </Link>
-        </section>
+            <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all duration-300 hover:bg-surface-container-low hover:border-primary/40 hover:shadow-soft hover:-translate-y-0.5 min-h-[280px] lg:min-h-[420px] animate-fade-in-up" style={{ animationDelay: `${activeProjects.length * 80}ms` }}>
+              <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
+                <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
+              </div>
+              <h4 className="font-headline text-lg lg:text-xl font-bold tracking-tight text-on-background">Novo Projeto</h4>
+              <p className="text-sm text-on-surface-variant text-center mt-2 max-w-[200px]">Inicie uma nova jornada de construção agora.</p>
+            </Link>
+          </section>
+        </>
       )}
     </>
   )
