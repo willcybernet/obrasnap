@@ -30,58 +30,90 @@ export function Sidebar() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('office_name')
-          .eq('id', user.id)
-          .single()
+      try {
+        const supabase = createClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
         
-        if (userData?.office_name) {
-          setOfficeName(userData.office_name)
+        if (authError) {
+          console.error('Erro de autenticação na sidebar:', authError)
+          return
         }
 
-        const { data: projects } = await supabase
-          .from('projects')
-          .select('id, name, end_date, stages(is_completed)')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .not('end_date', 'is', null)
+        if (user) {
+          // 1. Buscar nome do escritório
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('office_name')
+              .eq('id', user.id)
+              .single()
+            
+            if (userError) {
+              console.error('Erro ao buscar dados do usuário na sidebar:', userError)
+            } else if (userData?.office_name) {
+              setOfficeName(userData.office_name)
+            }
+          } catch (e) {
+            console.error('Exceção ao buscar dados do usuário na sidebar:', e)
+          }
 
-        if (projects) {
-          type Deadline = { id: string; name: string; end_date: string; progress: number }
-          const now = new Date()
-          const withProgress: Deadline[] = projects.map((p: any) => {
-            const stages = p.stages || []
-            const completed = stages.filter((s: any) => s.is_completed).length
-            const progress = stages.length > 0 ? Math.round((completed / stages.length) * 100) : 0
-            return { id: p.id, name: p.name, end_date: p.end_date, progress }
-          })
-          const sorted = withProgress
-            .filter(p => new Date(p.end_date) < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && p.progress < 100)
-            .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
-            .slice(0, 3)
-          setDeadlines(sorted)
+          // 2. Buscar prazos/vencimentos
+          try {
+            const { data: projects, error: projectsError } = await supabase
+              .from('projects')
+              .select('id, name, end_date, stages(is_completed)')
+              .eq('user_id', user.id)
+              .eq('is_active', true)
+              .not('end_date', 'is', null)
+
+            if (projectsError) {
+              console.error('Erro ao buscar projetos ativos na sidebar:', projectsError)
+            } else if (projects) {
+              type Deadline = { id: string; name: string; end_date: string; progress: number }
+              const now = new Date()
+              const withProgress: Deadline[] = projects.map((p: any) => {
+                const stages = p.stages || []
+                const completed = stages.filter((s: any) => s.is_completed).length
+                const progress = stages.length > 0 ? Math.round((completed / stages.length) * 100) : 0
+                return { id: p.id, name: p.name, end_date: p.end_date, progress }
+              })
+              const sorted = withProgress
+                .filter(p => new Date(p.end_date) < new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) && p.progress < 100)
+                .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
+                .slice(0, 3)
+              setDeadlines(sorted)
+            }
+          } catch (e) {
+            console.error('Exceção ao buscar projetos ativos na sidebar:', e)
+          }
+
+          // 3. Buscar projetos arquivados
+          try {
+            console.log('Sidebar: buscando projetos arquivados para o usuário:', user.id)
+            const { data: archived, error: archivedError } = await supabase
+              .from('projects')
+              .select('id, name')
+              .eq('user_id', user.id)
+              .eq('is_active', false)
+              .order('updated_at', { ascending: false })
+
+            if (archivedError) {
+              console.error('Erro ao buscar projetos arquivados na sidebar:', archivedError)
+            } else {
+              console.log('Sidebar: projetos arquivados encontrados:', archived)
+              setArchivedProjects(archived || [])
+            }
+          } catch (e) {
+            console.error('Exceção ao buscar projetos arquivados na sidebar:', e)
+          }
         }
-
-        const { data: archived } = await supabase
-          .from('projects')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .eq('is_active', false)
-          .order('updated_at', { ascending: false })
-
-        if (archived) {
-          setArchivedProjects(archived)
-        }
+      } catch (err) {
+        console.error('Erro geral no fetchUser da sidebar:', err)
       }
     }
 
     fetchUser()
-  }, [])
+  }, [pathname])
 
   const handleLogout = async () => {
     const supabase = createClient()
