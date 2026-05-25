@@ -106,11 +106,11 @@ export default function DashboardPage() {
   }, [retryCount, router])
 
   const activeProjects = projects.filter(p => p.is_active)
-  const completedProjects = projects.filter(p => !p.is_active)
   const delayedProjects = activeProjects.filter(p => {
     if (!p.end_date) return false
     return new Date(p.end_date) < new Date() && p.progress < 100
   })
+  const onTrackProjects = activeProjects.length - delayedProjects.length
 
   const getEfficiency = (project: ProjectWithProgress): number | null => {
     if (!project.start_date || !project.end_date) return null
@@ -197,7 +197,6 @@ export default function DashboardPage() {
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Em Atraso</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-error">{delayedProjects.length}</span>
-            <p className="text-[8px] lg:text-[10px] text-outline mt-1">com prazo vencido</p>
           </div>
         </div>
         
@@ -205,17 +204,16 @@ export default function DashboardPage() {
           <span className="font-label text-[10px] uppercase tracking-widest text-on-tertiary-container">Eficiência</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-tertiary-container">{avgEfficiency}%</span>
-            <p className="text-[8px] lg:text-[10px] text-on-tertiary-container/60 mt-1">progresso real vs cronograma</p>
           </div>
         </div>
         
         <div className="bg-surface-container-highest p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-outline-variant/20 hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <span className="font-label text-[10px] uppercase tracking-widest text-on-surface">Concluídos</span>
-          <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-surface">{completedProjects.length}</span>
+          <span className="font-label text-[10px] uppercase tracking-widest text-on-surface">Em Dia</span>
+          <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-surface">{onTrackProjects}</span>
         </div>
       </section>
 
-      {projects.length === 0 ? (
+      {activeProjects.length === 0 ? (
         <section className="flex flex-col items-center justify-center py-16 lg:py-24">
           <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-surface-container-low flex items-center justify-center mb-6 lg:mb-8">
             <HardHat className="w-10 h-10 lg:w-12 lg:h-12 text-outline" />
@@ -231,7 +229,7 @@ export default function DashboardPage() {
         </section>
       ) : (
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-12">
-          {projects.map((project, idx) => {
+          {activeProjects.map((project, idx) => {
             const statusColors: Record<string, string> = {
               emprogresso: 'bg-primary',
               planejamento: 'bg-on-tertiary-container',
@@ -302,7 +300,7 @@ export default function DashboardPage() {
             )
           })}
 
-          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all duration-300 hover:bg-surface-container-low hover:border-primary/40 hover:shadow-soft hover:-translate-y-0.5 min-h-[280px] lg:min-h-[420px] animate-fade-in-up" style={{ animationDelay: `${projects.length * 80}ms` }}>
+          <Link href="/dashboard/new" className="group cursor-pointer border-2 border-dashed border-outline-variant/30 rounded-xl flex flex-col items-center justify-center p-8 lg:p-12 transition-all duration-300 hover:bg-surface-container-low hover:border-primary/40 hover:shadow-soft hover:-translate-y-0.5 min-h-[280px] lg:min-h-[420px] animate-fade-in-up" style={{ animationDelay: `${activeProjects.length * 80}ms` }}>
             <div className="w-12 lg:w-16 h-12 lg:h-16 rounded-full bg-surface-container flex items-center justify-center mb-4 lg:mb-6 group-hover:bg-primary transition-colors">
               <Plus className="text-outline text-2xl lg:text-3xl group-hover:text-on-primary" />
             </div>
