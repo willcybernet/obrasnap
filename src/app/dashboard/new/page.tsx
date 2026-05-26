@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CheckCircle, Plus, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Plus, X, ArrowUp, ArrowDown, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase'
@@ -35,6 +35,10 @@ export default function NewProjectPage() {
   const [newClientPhone, setNewClientPhone] = useState('')
   const [clientSaving, setClientSaving] = useState(false)
   const [clientError, setClientError] = useState('')
+
+  // Custom stages state
+  const [customStages, setCustomStages] = useState<string[]>(DEFAULT_STAGES.map(s => s.name))
+  const [newStageName, setNewStageName] = useState('')
 
   const loadClients = async () => {
     try {
@@ -141,13 +145,27 @@ export default function NewProjectPage() {
 
       console.log('Projeto criado com sucesso:', project)
 
-      if (project && useTemplate) {
-        const stagesData = DEFAULT_STAGES.map(stage => ({
-          project_id: project.id,
-          name: stage.name,
-          order_index: stage.order,
-          is_completed: false,
-        }))
+      if (project) {
+        let stagesData = []
+        if (useTemplate) {
+          stagesData = DEFAULT_STAGES.map(stage => ({
+            project_id: project.id,
+            name: stage.name,
+            order_index: stage.order,
+            is_completed: false,
+          }))
+        } else {
+          const validStages = customStages.filter(name => name.trim() !== '')
+          if (validStages.length === 0) {
+            throw new Error('Você deve adicionar pelo menos uma etapa para o projeto.')
+          }
+          stagesData = validStages.map((name, index) => ({
+            project_id: project.id,
+            name: name.trim(),
+            order_index: index + 1,
+            is_completed: false,
+          }))
+        }
 
         const { error: stagesError } = await supabase.from('stages').insert(stagesData)
         
@@ -330,7 +348,7 @@ export default function NewProjectPage() {
               </button>
             </div>
 
-            {useTemplate && (
+            {useTemplate ? (
               <div className="space-y-2 lg:space-y-3">
                 {DEFAULT_STAGES.map((stage, index) => (
                   <div
@@ -343,6 +361,113 @@ export default function NewProjectPage() {
                     <span className="text-sm font-medium text-on-surface">{stage.name}</span>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2 lg:space-y-3">
+                  {customStages.map((stageName, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 p-2 lg:p-3 rounded-xl bg-surface-container-low border border-outline-variant/30"
+                    >
+                      <span className="text-sm font-medium text-outline w-6 text-center">
+                        {index + 1}.
+                      </span>
+                      <Input
+                        value={stageName}
+                        onChange={(e) => {
+                          const updated = [...customStages]
+                          updated[index] = e.target.value
+                          setCustomStages(updated)
+                        }}
+                        placeholder={`Etapa ${index + 1}`}
+                        className="flex-1 h-10 bg-transparent border-none focus:ring-0 focus:bg-surface-container"
+                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={index === 0}
+                          onClick={() => {
+                            if (index === 0) return
+                            const updated = [...customStages]
+                            const temp = updated[index]
+                            updated[index] = updated[index - 1]
+                            updated[index - 1] = temp
+                            setCustomStages(updated)
+                          }}
+                          className="h-8 w-8 text-outline hover:text-on-surface p-0 flex items-center justify-center"
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={index === customStages.length - 1}
+                          onClick={() => {
+                            if (index === customStages.length - 1) return
+                            const updated = [...customStages]
+                            const temp = updated[index]
+                            updated[index] = updated[index + 1]
+                            updated[index + 1] = temp
+                            setCustomStages(updated)
+                          }}
+                          className="h-8 w-8 text-outline hover:text-on-surface p-0 flex items-center justify-center"
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const updated = customStages.filter((_, i) => i !== index)
+                            setCustomStages(updated)
+                          }}
+                          className="h-8 w-8 text-error hover:text-error/80 hover:bg-error/10 p-0 flex items-center justify-center"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {customStages.length === 0 && (
+                    <p className="text-sm text-outline text-center py-4">Nenhuma etapa adicionada. Adicione etapas abaixo.</p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nova etapa (ex: Gesso, Jardinagem)"
+                    value={newStageName}
+                    onChange={(e) => setNewStageName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (newStageName.trim()) {
+                          setCustomStages([...customStages, newStageName.trim()])
+                          setNewStageName('')
+                        }
+                      }
+                    }}
+                    className="h-11 bg-surface-container border-none border-b-2 border-outline-variant focus:border-primary rounded-t-lg"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (newStageName.trim()) {
+                        setCustomStages([...customStages, newStageName.trim()])
+                        setNewStageName('')
+                      }
+                    }}
+                    className="bg-surface-container-low text-on-surface border border-outline-variant/30 hover:bg-surface-container h-11 px-4 flex items-center justify-center gap-1.5 rounded-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Adicionar</span>
+                  </Button>
+                </div>
               </div>
             )}
           </section>
