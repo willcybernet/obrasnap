@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Timeline } from '@/components/timeline'
 import { createClient } from '@/lib/supabase'
 import { sendUpdateNotification } from '@/lib/notifications'
+import { Lightbox } from '@/components/ui/lightbox'
 import type { Photo, Project, Stage, UpdateWithPhotos } from '@/lib/types'
 
 interface ProjectDetails extends Project {
@@ -40,6 +41,7 @@ export default function ProjectPage() {
   const [editRemovePhotoIds, setEditRemovePhotoIds] = useState<string[]>([])
   const [editNewPhotos, setEditNewPhotos] = useState<File[]>([])
   const [editSaving, setEditSaving] = useState(false)
+  const [activePhoto, setActivePhoto] = useState<string | null>(null)
 
   const loadProject = useCallback(async () => {
     try {
@@ -384,7 +386,12 @@ export default function ProjectPage() {
 
           <section className="group relative aspect-video w-full overflow-hidden rounded-xl bg-surface-container-low">
             {coverImage ? (
-              <img src={coverImage} alt="Capa do projeto" className="h-full w-full object-cover" />
+              <img
+                src={coverImage}
+                alt="Capa do projeto"
+                className="h-full w-full object-cover cursor-pointer hover:scale-[1.01] transition-transform duration-300"
+                onClick={() => setActivePhoto(coverImage)}
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-surface-container-highest">
                 <ImageIcon className="h-12 w-12 text-outline/30" />
@@ -538,8 +545,16 @@ export default function ProjectPage() {
                       {update.photos && update.photos.length > 0 && (
                         <div className="flex gap-2 overflow-x-auto pb-2 lg:gap-3">
                           {update.photos.slice(0, 6).map((photo) => (
-                            <div key={photo.id} className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-container-highest lg:h-24 lg:w-24">
-                              <img src={photo.storage_url} alt="" className="h-full w-full object-cover" />
+                            <div
+                              key={photo.id}
+                              className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface-container-highest lg:h-24 lg:w-24 cursor-pointer"
+                              onClick={() => setActivePhoto(photo.storage_url)}
+                            >
+                              <img
+                                src={photo.storage_url}
+                                alt=""
+                                className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+                              />
                             </div>
                           ))}
                         </div>
@@ -729,6 +744,12 @@ export default function ProjectPage() {
           </Button>
         </aside>
       </div>
+
+      <Lightbox
+        src={activePhoto}
+        isOpen={!!activePhoto}
+        onClose={() => setActivePhoto(null)}
+      />
     </>
   )
 }
