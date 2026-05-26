@@ -27,7 +27,7 @@ export default function DashboardPage() {
       try {
         const supabase = createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        
+
         if (authError) {
           console.error('Erro de autenticação:', authError)
           setError('Erro de autenticação. Por favor, faça login novamente.')
@@ -59,9 +59,9 @@ export default function DashboardPage() {
           const totalStages = stages.length
           const completedStages = stages.filter((s: any) => s.is_completed).length
           const progress = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0
-          
+
           const currentStage = stages.find((s: any) => !s.is_completed)?.name || stages[stages.length - 1]?.name || 'Início'
-          
+
           let status = 'emprogresso'
           if (progress === 100) status = 'finalizando'
           else if (progress < 25) status = 'planejamento'
@@ -126,11 +126,11 @@ export default function DashboardPage() {
 
   const avgEfficiency = activeProjects.length > 0
     ? (() => {
-        const efficiencies = activeProjects.map(getEfficiency).filter((e): e is number => e !== null)
-        return efficiencies.length > 0
-          ? Math.round(efficiencies.reduce((acc, e) => acc + e, 0) / efficiencies.length)
-          : Math.round(activeProjects.reduce((acc, p) => acc + p.progress, 0) / activeProjects.length)
-      })()
+      const efficiencies = activeProjects.map(getEfficiency).filter((e): e is number => e !== null)
+      return efficiencies.length > 0
+        ? Math.round(efficiencies.reduce((acc, e) => acc + e, 0) / efficiencies.length)
+        : Math.round(activeProjects.reduce((acc, p) => acc + p.progress, 0) / activeProjects.length)
+    })()
     : 0
 
   if (loading) {
@@ -146,7 +146,7 @@ export default function DashboardPage() {
       <div className="p-6 bg-error-container text-on-error-container rounded-lg text-sm">
         <div className="flex flex-col items-center text-center">
           <p className="mb-4">Erro ao carregar projetos: {error}</p>
-          <button 
+          <button
             onClick={() => setRetryCount(prev => prev + 1)}
             className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
           >
@@ -196,7 +196,7 @@ export default function DashboardPage() {
         <div className="mb-8 p-6 bg-error-container text-on-error-container rounded-lg text-sm">
           <div className="flex flex-col items-center text-center">
             <p className="mb-4">Erro ao carregar projetos: {error}</p>
-            <button 
+            <button
               onClick={() => setRetryCount(prev => prev + 1)}
               className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
             >
@@ -211,21 +211,21 @@ export default function DashboardPage() {
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Ativos</span>
           <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter">{activeProjects.length}</span>
         </div>
-        
+
         <div className="bg-surface-container-low p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-surface-container hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-outline">Em Atraso</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-error">{delayedProjects.length}</span>
           </div>
         </div>
-        
+
         <div className="bg-tertiary-container p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-tertiary-fixed-dim hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-on-tertiary-container">Eficiência</span>
           <div>
             <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-tertiary-container">{avgEfficiency}%</span>
           </div>
         </div>
-        
+
         <div className="bg-surface-container-highest p-4 lg:p-8 flex flex-col justify-between h-32 lg:h-48 rounded-xl transition-all duration-300 hover:bg-outline-variant/20 hover:shadow-soft hover:-translate-y-0.5 border border-outline-variant/10 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <span className="font-label text-[10px] uppercase tracking-widest text-on-surface">Em Dia</span>
           <span className="font-headline text-3xl lg:text-6xl font-light tracking-tighter text-on-surface">{onTrackProjects}</span>
@@ -272,14 +272,14 @@ export default function DashboardPage() {
                 finalizando: 'bg-secondary-fixed-dim/80',
                 critico: 'bg-error-container/80',
               }
-              
+
               const gradientColors: Record<string, string> = {
                 emprogresso: 'from-primary/80 to-secondary/60',
                 planejamento: 'from-tertiary/80 to-tertiary-container/60',
                 finalizando: 'from-secondary-fixed/80 to-secondary-fixed-dim/60',
                 critico: 'from-error/80 to-error-container/60',
               }
-              
+
               return (
                 <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer animate-fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
                   <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]} transition-all duration-300 group-hover:shadow-lift group-hover:-translate-y-1`}>

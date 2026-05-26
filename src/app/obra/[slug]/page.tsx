@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Building2, Camera, Check } from 'lucide-react'
+import { Building2, Camera, Check, ImageIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { ThemeToggle } from '@/components/theme-toggle'
 import type { Project, Stage, Update, Photo } from '@/lib/types'
 
 interface UpdateWithPhotos extends Update {
@@ -14,7 +15,7 @@ interface UpdateWithPhotos extends Update {
 export default function PublicProjectPage() {
   const params = useParams()
   const slug = params.slug as string
-  
+
   const [project, setProject] = useState<Project | null>(null)
   const [stages, setStages] = useState<Stage[]>([])
   const [updates, setUpdates] = useState<UpdateWithPhotos[]>([])
@@ -23,13 +24,13 @@ export default function PublicProjectPage() {
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createClient()
-      
+
       const { data: projectData } = await supabase
         .from('projects')
         .select('*, users(office_name, logo_url, primary_color)')
         .eq('public_slug', slug)
         .single()
-      
+
       if (projectData) {
         setProject({
           ...projectData,
@@ -37,24 +38,24 @@ export default function PublicProjectPage() {
           logo_url: projectData.users?.logo_url,
           primary_color: projectData.users?.primary_color,
         } as Project)
-        
+
         const { data: stagesData } = await supabase
           .from('stages')
           .select('*')
           .eq('project_id', projectData.id)
           .order('order_index')
-        
+
         if (stagesData) setStages(stagesData)
-        
+
         const { data: updatesData } = await supabase
           .from('updates')
           .select('*, stage:stages(*), photos(*)')
           .eq('project_id', projectData.id)
           .order('created_at', { ascending: false })
-        
+
         if (updatesData) setUpdates(updatesData as UpdateWithPhotos[])
       }
-      
+
       setLoading(false)
     }
 
@@ -66,17 +67,17 @@ export default function PublicProjectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-pulse font-headline text-xl">Carregando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando...</div>
       </div>
     )
   }
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="text-center">
-          <h1 className="font-headline text-2xl font-bold text-on-surface mb-2">Projeto não encontrado</h1>
+          <h1 className="font-headline text-2xl font-bold text-on-background mb-2">Projeto não encontrado</h1>
           <p className="text-on-surface-variant">O link pode estar expirado ou inválido.</p>
         </div>
       </div>
@@ -84,25 +85,34 @@ export default function PublicProjectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
-      <header className="sticky top-0 z-50" style={{ backgroundColor: '#F4F4F4' }}>
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant/10">
         <div className="px-4 lg:px-8 py-4 lg:py-6 flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
-            <div 
-              className="w-10 lg:w-12 h-10 lg:h-12 rounded-xl flex items-center justify-center shadow-architectural"
-              style={{ backgroundColor: project.primary_color || '#5f5e5e' }}
-            >
-              <Building2 className="w-5 lg:w-6 h-5 lg:h-6 text-white" />
-            </div>
+            {project.logo_url ? (
+              <div className="w-10 lg:w-12 h-10 lg:h-12 rounded-xl overflow-hidden shadow-architectural">
+                <img src={project.logo_url} alt={project.office_name || 'Logo'} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div
+                className="w-10 lg:w-12 h-10 lg:h-12 rounded-xl flex items-center justify-center shadow-architectural"
+                style={{ backgroundColor: project.primary_color || 'var(--primary)' }}
+              >
+                <Building2 className="w-5 lg:w-6 h-5 lg:h-6 text-white" />
+              </div>
+            )}
             <span className="font-headline font-bold text-base lg:text-lg text-on-background">
               {project.office_name || 'ObraSnap'}
             </span>
+          </div>
+          <div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
       <main className="px-4 lg:px-8 py-8 lg:py-12 max-w-3xl mx-auto space-y-8 lg:space-y-12">
-        <div className="text-center space-y-2 lg:space-y-3">
+        <div className="text-center space-y-2 lg:space-y-3 animate-fade-in-up">
           <span className="font-label text-xs uppercase tracking-[0.2em] text-outline block">Projeto</span>
           <h1 className="font-headline text-3xl lg:text-5xl font-medium tracking-tighter text-on-background">
             {project.name}
@@ -110,7 +120,19 @@ export default function PublicProjectPage() {
           <p className="text-on-surface-variant text-base lg:text-lg">{project.address}</p>
         </div>
 
-        <div className="bg-surface-container-low rounded-xl p-6 lg:p-8 border border-outline-variant/10">
+        {/* Cover image banner */}
+        {(project.cover_image_url || (updates.flatMap(u => u.photos || [])[0]?.storage_url)) && (
+          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-surface-container-low border border-outline-variant/10 shadow-soft animate-fade-in">
+            <img
+              src={project.cover_image_url || updates.flatMap(u => u.photos || [])[0]?.storage_url}
+              alt="Capa do projeto"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          </div>
+        )}
+
+        <div className="bg-surface-container-low rounded-xl p-6 lg:p-8 border border-outline-variant/10 shadow-soft">
           <div className="flex items-end justify-between mb-4 lg:mb-6">
             <div>
               <span className="font-label text-[10px] uppercase tracking-widest text-outline block mb-2">Progresso</span>
@@ -119,13 +141,13 @@ export default function PublicProjectPage() {
               </span>
             </div>
           </div>
-          
+
           <div className="h-1.5 lg:h-2 bg-surface-container-highest rounded-full overflow-hidden mb-4 lg:mb-8">
             <div
               className="h-full rounded-full transition-all"
-              style={{ 
+              style={{
                 width: `${progress}%`,
-                backgroundColor: project.primary_color || '#5f5e5e'
+                backgroundColor: project.primary_color || 'var(--primary)'
               }}
             />
           </div>
@@ -134,36 +156,41 @@ export default function PublicProjectPage() {
             {stages.map((stage) => (
               <div
                 key={stage.id}
-                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium ${
-                  stage.is_completed
+                className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium flex items-center gap-1.5 ${stage.is_completed
                     ? 'bg-success text-white'
                     : 'bg-surface-container text-on-surface-variant'
-                }`}
+                  }`}
               >
                 {stage.is_completed ? (
-                  <Check className="w-3 lg:w-4 h-3 lg:h-4 inline mr-1" />
+                  <Check className="w-3 lg:w-4 h-3 lg:h-4" />
                 ) : (
                   <span className="inline-block w-3 lg:w-4 text-center">○</span>
-                )} 
+                )}
                 {stage.name}
               </div>
             ))}
           </div>
         </div>
 
-        <div>
+        <div className="space-y-6">
           <span className="font-label text-xs uppercase tracking-[0.2em] text-outline block mb-4 lg:mb-6">Atualizações Recentes</span>
-          
+
           <div className="space-y-4 lg:space-y-6">
+            {updates.length === 0 && (
+              <div className="text-center py-12 bg-surface-container-low rounded-xl border border-outline-variant/10 text-on-surface-variant text-sm">
+                Nenhuma atualização registrada para este projeto ainda.
+              </div>
+            )}
+
             {updates.map((update) => (
-              <div key={update.id} className="bg-surface-container-low rounded-xl p-4 lg:p-6">
+              <div key={update.id} className="bg-surface-container-low rounded-xl p-4 lg:p-6 border border-outline-variant/10 hover:border-outline-variant/30 transition-all duration-300 shadow-soft">
                 <div className="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4">
                   <Camera className="w-4 lg:w-5 h-4 lg:h-5 text-outline" />
                   <span className="font-label text-[10px] uppercase tracking-widest text-outline">
-                    {new Date(update.created_at).toLocaleDateString('pt-BR', { 
-                      day: '2-digit', 
-                      month: '2-digit', 
-                      year: 'numeric' 
+                    {new Date(update.created_at).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
                     })}
                   </span>
                   {update.stage && (
@@ -173,22 +200,22 @@ export default function PublicProjectPage() {
                     </>
                   )}
                 </div>
-                
+
                 {update.note && (
-                  <p className="text-on-surface-variant mb-3 lg:mb-4 text-sm lg:text-base">{update.note}</p>
+                  <p className="text-on-surface-variant mb-3 lg:mb-4 text-sm lg:text-base leading-relaxed">{update.note}</p>
                 )}
-                
+
                 {update.photos && update.photos.length > 0 && (
-                  <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2">
+                  <div className="flex gap-2 lg:gap-3 overflow-x-auto pb-2 scrollbar-thin">
                     {update.photos.map((photo) => (
                       <div
                         key={photo.id}
-                        className="w-20 lg:w-28 h-20 lg:h-28 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0"
+                        className="w-20 lg:w-28 h-20 lg:h-28 bg-surface-container-highest rounded-lg overflow-hidden flex-shrink-0 border border-outline-variant/10"
                       >
-                        <img 
-                          src={photo.storage_url} 
-                          alt="" 
-                          className="w-full h-full object-cover"
+                        <img
+                          src={photo.storage_url}
+                          alt=""
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
                         />
                       </div>
                     ))}
@@ -199,7 +226,7 @@ export default function PublicProjectPage() {
           </div>
         </div>
 
-        <div className="text-center pt-6 lg:pt-8 border-t border-surface-container">
+        <div className="text-center pt-6 lg:pt-8 border-t border-outline-variant/10">
           <p className="text-sm text-on-surface-variant">
             Gerenciado por <strong className="text-on-surface">{project.office_name || 'ObraSnap'}</strong>
           </p>
