@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Camera, Edit, Share2, Upload, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Camera, Edit, Share2, Upload, X, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from '@/components/timeline'
 import { createClient } from '@/lib/supabase'
 import { sendUpdateNotification } from '@/lib/notifications'
 import { Lightbox } from '@/components/ui/lightbox'
+import ConfirmModal from '@/components/ui/confirm-modal'
 import type { Photo, Project, Stage, UpdateWithPhotos } from '@/lib/types'
 
 interface ProjectDetails extends Project {
@@ -42,6 +43,9 @@ export default function ProjectPage() {
   const [editNewPhotos, setEditNewPhotos] = useState<File[]>([])
   const [editSaving, setEditSaving] = useState(false)
   const [activePhoto, setActivePhoto] = useState<string | null>(null)
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const loadProject = useCallback(async () => {
     try {
@@ -104,6 +108,48 @@ export default function ProjectPage() {
       console.error('Erro ao atualizar etapa:', err)
       setError(err.message || 'Erro ao atualizar etapa')
     }
+  }
+
+  // Delete project handlers
+  const handleDeleteClick = () => {
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    setDeleteLoading(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      // Call the delete API route
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao excluir projeto')
+      }
+
+      // Redirect to dashboard after successful deletion
+      router.push('/dashboard')
+    } catch (error: any) {
+      console.error('Erro ao excluir projeto:', error)
+      setDeleteLoading(false)
+      alert(error.message || 'Erro ao excluir projeto. Tente novamente.')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false)
+    setDeleteLoading(false)
   }
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,12 +405,20 @@ export default function ProjectPage() {
 
   return (
     <>
-      <div className="mb-6 lg:mb-8">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 text-outline transition-colors hover:text-on-surface">
-          <ArrowLeft className="h-4 w-4" />
-          <span className="font-label text-[10px] uppercase tracking-widest">Voltar</span>
-        </Link>
-      </div>
+       <div className="mb-6 lg:mb-8 flex justify-between items-center">
+         <Link href="/dashboard" className="inline-flex items-center gap-2 text-outline transition-colors hover:text-on-surface">
+           <ArrowLeft className="h-4 w-4" />
+           <span className="font-label text-[10px] uppercase tracking-widest">Voltar</span>
+         </Link>
+         <button
+           onClick={handleDeleteClick}
+           className="text-outline hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-container/20"
+           title="Excluir projeto"
+           disabled={deleteLoading}
+         >
+           <Trash2 className="w-4 h-4" />
+         </button>
+       </div>
 
       {error && (
         <div className="mb-6 rounded-lg bg-error-container p-4 text-sm text-on-error-container">
@@ -738,18 +792,31 @@ export default function ProjectPage() {
             </section>
           )}
 
-          <Button variant="secondary" className="w-full" onClick={copyLink}>
-            <Share2 className="mr-2 h-4 w-4" />
-            {copied ? 'Link copiado' : 'Compartilhar'}
-          </Button>
-        </aside>
-      </div>
+           <Button variant="secondary" className="w-full" onClick={copyLink}>
+             <Share2 className="mr-2 h-4 w-4" />
+             {copied ? 'Link copiado' : 'Compartilhar'}
+           </Button>
+         </aside>
+       </div>
 
-      <Lightbox
-        src={activePhoto}
-        isOpen={!!activePhoto}
-        onClose={() => setActivePhoto(null)}
-      />
-    </>
-  )
-}
+       <Lightbox
+         src={activePhoto}
+         isOpen={!!activePhoto}
+         onClose={() => setActivePhoto(null)}
+       />
+
+       {/* Delete Confirmation Modal */}
+       <ConfirmModal
+         isOpen={deleteModalOpen}
+         onClose={handleDeleteCancel}
+         onConfirm={handleDeleteConfirm}
+         title="Excluir Projeto"
+         description="Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita."
+         confirmText="Excluir"
+         cancelText="Cancelar"
+         isLoading={deleteLoading}
+         variant="destructive"
+       />
+     </>
+   )
+ }

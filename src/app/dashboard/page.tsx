@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, HardHat, LayoutDashboard, FolderOpen, Users } from 'lucide-react'
+import { Plus, HardHat, LayoutDashboard, FolderOpen, Users, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import ConfirmModal from '@/components/ui/confirm-modal'
 import type { Project } from '@/lib/types'
 
 interface ProjectWithProgress extends Project {
@@ -21,6 +22,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -122,6 +127,58 @@ export default function DashboardPage() {
     if (elapsedDays <= 0) return 100
     const expectedProgress = Math.min(100, Math.round((elapsedDays / totalDays) * 100))
     return Math.min(100, Math.round((project.progress / expectedProgress) * 100))
+  }
+
+  // Delete project handlers
+  const handleDeleteClick = (id: string) => {
+    setDeleteProjectId(id)
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteProjectId) return
+    
+    setDeleteLoading(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      // Call the delete API route
+      const response = await fetch(`/api/projects/${deleteProjectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao excluir projeto')
+      }
+
+      // Remove project from local state
+      setProjects(prev => prev.filter(project => project.id !== deleteProjectId))
+      
+      // Close modal and reset
+      setDeleteModalOpen(false)
+      setDeleteProjectId(null)
+      setDeleteLoading(false)
+    } catch (error: any) {
+      console.error('Erro ao excluir projeto:', error)
+      setDeleteLoading(false)
+      // Show error in modal or use toast notification
+      alert(error.message || 'Erro ao excluir projeto. Tente novamente.')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false)
+    setDeleteProjectId(null)
+    setDeleteLoading(false)
   }
 
   const avgEfficiency = activeProjects.length > 0
@@ -309,17 +366,27 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="space-y-2 lg:space-y-4">
-                    <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="font-label text-[10px] uppercase tracking-widest text-outline truncate flex-1">{project.address || 'Sem endereço'}</span>
-                        {(project as any).client && (
-                          <span className="font-label text-[9px] uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded text-on-surface font-semibold max-w-[120px] truncate shrink-0">
-                            👤 {(project as any).client.name}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight mt-1">{project.name}</h3>
-                    </div>
+                   <div>
+                     <div className="flex justify-between items-start gap-2">
+                       <span className="font-label text-[10px] uppercase tracking-widest text-outline truncate flex-1">{project.address || 'Sem endereço'}</span>
+                       {(project as any).client && (
+                         <span className="font-label text-[9px] uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded text-on-surface font-semibold max-w-[120px] truncate shrink-0">
+                           👤 {(project as any).client.name}
+                         </span>
+                       )}
+                     </div>
+                     <div className="flex justify-between items-start gap-2">
+                       <h3 className="font-headline text-lg lg:text-2xl font-bold tracking-tight mt-1">{project.name}</h3>
+                       <button
+                         onClick={() => handleDeleteClick(project.id)}
+                         className="text-outline hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-container/20"
+                         title="Excluir projeto"
+                         disabled={deleteLoading}
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                   </div>
                     <div className="pt-2 lg:pt-4 border-t border-surface-container">
                       <div className="flex justify-between items-end mb-1 lg:mb-2">
                         <div>
@@ -345,8 +412,20 @@ export default function DashboardPage() {
               <p className="text-sm text-on-surface-variant text-center mt-2 max-w-[200px]">Inicie uma nova jornada de construção agora.</p>
             </Link>
           </section>
-        </>
-      )}
-    </>
-  )
-}
+         </>
+       )}
+       {/* Delete Confirmation Modal */}
+       <ConfirmModal
+         isOpen={deleteModalOpen}
+         onClose={handleDeleteCancel>
+         onConfirm={handleDeleteConfirm}
+         title="Excluir Projeto"
+         description="Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita."
+         confirmText="Excluir"
+         cancelText="Cancelar"
+         isLoading={deleteLoading}
+         variant="destructive"
+       />
+     </>
+   )
+ }

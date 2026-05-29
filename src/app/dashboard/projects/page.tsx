@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, HardHat, Filter } from 'lucide-react'
+import { Plus, Search, HardHat, Filter, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase'
 import { getProjects, getClients } from '@/lib/db'
+import ConfirmModal from '@/components/ui/confirm-modal'
 import type { Project, Client } from '@/lib/types'
 
 interface ProjectWithProgressAndClient extends Project {
@@ -29,6 +30,11 @@ export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
+  
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,27 +122,78 @@ export default function ProjectsPage() {
       project.client_id === selectedClientId
 
     // 3. Status filter
-    let matchesStatus = true
-    if (selectedStatus !== 'all') {
-      if (selectedStatus === 'active') {
-        matchesStatus = project.is_active
-      } else if (selectedStatus === 'archived') {
-        matchesStatus = !project.is_active
-      } else {
-        matchesStatus = project.status === selectedStatus && project.is_active
-      }
-    }
+     let matchesStatus = true
+     if (selectedStatus !== 'all') {
+       if (selectedStatus === 'active') {
+         matchesStatus = project.is_active
+       } else if (selectedStatus === 'archived') {
+         matchesStatus = !project.is_active
+       } else {
+         matchesStatus = project.status === selectedStatus && project.is_active
+       }
+     }
 
-    return matchesText && matchesClient && matchesStatus
-  })
+     return matchesText && matchesClient && matchesStatus
+   })
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
-      </div>
-    )
-  }
+   // Delete project handlers
+   const handleDeleteClick = (id: string) => {
+     setDeleteProjectId(id)
+     setDeleteModalOpen(true)
+   }
+
+   const handleDeleteConfirm = async () => {
+     if (!deleteProjectId) return
+     
+     setDeleteLoading(true)
+     try {
+       const supabase = createClient()
+       const { data: { user } } = await supabase.auth.getUser()
+       
+       if (!user) {
+         throw new Error('Usuário não autenticado')
+       }
+
+       // Call the delete API route
+       const response = await fetch(`/api/projects/${deleteProjectId}`, {
+         method: 'DELETE',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+       })
+
+       if (!response.ok) {
+         const errorData = await response.json()
+         throw new Error(errorData.error || 'Erro ao excluir projeto')
+       }
+
+       // Remove project from local state
+       setProjects(prev => prev.filter(project => project.id !== deleteProjectId))
+       
+       // Close modal and reset
+       setDeleteModalOpen(false)
+       setDeleteProjectId(null)
+       setDeleteLoading(false)
+     } catch (error: any) {
+       console.error('Erro ao excluir projeto:', error)
+       setDeleteLoading(false)
+       alert(error.message || 'Erro ao excluir projeto. Tente novamente.')
+     }
+   }
+
+   const handleDeleteCancel = () => {
+     setDeleteModalOpen(false)
+     setDeleteProjectId(null)
+     setDeleteLoading(false)
+   }
+
+   if (loading) {
+     return (
+       <div className="flex items-center justify-center h-64">
+         <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
+       </div>
+     )
+   }
 
   return (
     <>
@@ -316,14 +373,34 @@ export default function ProjectsPage() {
                     </div>
                     <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
                       <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                 </div>
+               </div>
+               {/* Delete button */}
+               <button
+                 onClick={() => handleDeleteClick(project.id)}
+                 className="absolute top-3 right-3 text-outline hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-container/20 z-20"
+                 title="Excluir projeto"
+                 disabled={deleteLoading}
+               >
+                 <Trash2 className="w-4 h-4" />
+               </button>
+             </Link>
             )
           })}
-        </section>
-      )}
-    </>
-  )
-}
+         </section>
+       )}
+       {/* Delete Confirmation Modal */}
+       <ConfirmModal
+         isOpen={deleteModalOpen}
+         onClose={handleDeleteCancel}
+         onConfirm={handleDeleteConfirm}
+         title="Excluir Projeto"
+         description="Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita."
+         confirmText="Excluir"
+         cancelText="Cancelar"
+         isLoading={deleteLoading}
+         variant="destructive"
+       />
+     </>
+   )
+ }
