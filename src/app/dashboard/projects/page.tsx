@@ -193,9 +193,8 @@ export default function ProjectsPage() {
          <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
        </div>
      )
-   }
-
-  return (
+  
+    return (
     <>
       <section className="mb-8 lg:mb-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

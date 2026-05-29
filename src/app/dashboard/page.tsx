@@ -190,45 +190,43 @@ export default function DashboardPage() {
     })()
     : 0
 
-  if (loading) {
+   if (loading) {
+     return (
+       <div className="flex items-center justify-center h-64">
+         <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
+       </div>
+     )
+ 
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
-      </div>
-    )
-  }
+       <div className="p-6 bg-error-container text-on-error-container rounded-lg text-sm">
+         <div className="flex flex-col items-center text-center">
+           <p className="mb-4">Erro ao carregar projetos: {error}</p>
+           <button
+             onClick={() => setRetryCount(prev => prev + 1)}
+             className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
+           >
+             Tentar novamente
+           </button>
+         </div>
+       </div>
+     )
+   }
 
-  if (error) {
-    return (
-      <div className="p-6 bg-error-container text-on-error-container rounded-lg text-sm">
-        <div className="flex flex-col items-center text-center">
-          <p className="mb-4">Erro ao carregar projetos: {error}</p>
-          <button
-            onClick={() => setRetryCount(prev => prev + 1)}
-            className="px-4 py-2 bg-error text-on-error rounded-lg font-medium hover:bg-error/90 transition-colors"
-          >
-            Tentar novamente
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <section className="mb-8 lg:mb-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">ObraSnap • Dashboard</span>
-            <h2 className="font-headline text-3xl lg:text-6xl tracking-tighter text-on-background font-medium">Dashboard</h2>
-            <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
-              {activeProjects.length > 0 ? (
-                <>Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.</>
-              ) : (
-                <>Você ainda não tem obras cadastradas. Comece criando seu primeiro projeto!</>
-              )}
-            </p>
-          </div>
+   return (
+     <>
+       <section className="mb-8 lg:mb-12">
+         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+           <div className="flex flex-col gap-2">
+             <span className="font-label text-xs uppercase tracking-[0.2em] text-outline hidden md:block">ObraSnap • Dashboard</span>
+             <h2 className="font-headline text-3xl lg:text-6xl tracking-tighter text-on-background font-medium">Dashboard</h2>
+             <p className="font-body text-base lg:text-lg text-on-surface-variant mt-2 lg:mt-4">
+               {activeProjects.length > 0 ? (
+                 <>Você tem <span className="text-on-background font-semibold">{activeProjects.length} obras ativas</span> sob sua supervisão.</>
+               ) : (
+                 <>Você ainda não tem obras cadastradas. Comece criando seu primeiro projeto!</>
+               )}
+             </p>
+           </div>
           {/* Atalhos rápidos */}
           <div className="flex items-center gap-3 pb-1">
             <Link
