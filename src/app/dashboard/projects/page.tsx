@@ -25,12 +25,12 @@ export default function ProjectsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  
+
   // Filters state
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
-  
+
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
@@ -44,7 +44,7 @@ export default function ProjectsPage() {
 
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
-        
+
         if (!user) {
           router.push('/login')
           return
@@ -64,9 +64,9 @@ export default function ProjectsPage() {
           const totalStages = stages.length
           const completedStages = stages.filter((s: any) => s.is_completed).length
           const progress = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0
-          
+
           const currentStage = stages.find((s: any) => !s.is_completed)?.name || stages[stages.length - 1]?.name || 'Início'
-          
+
           let status = 'emprogresso'
           if (progress === 100) status = 'finalizando'
           else if (progress < 25) status = 'planejamento'
@@ -112,90 +112,90 @@ export default function ProjectsPage() {
   // Filter logic
   const filteredProjects = projects.filter(project => {
     // 1. Text search
-    const matchesText = 
+    const matchesText =
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (project.address && project.address.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // 2. Client filter
-    const matchesClient = 
-      selectedClientId === 'all' || 
+    const matchesClient =
+      selectedClientId === 'all' ||
       project.client_id === selectedClientId
 
     // 3. Status filter
-     let matchesStatus = true
-     if (selectedStatus !== 'all') {
-       if (selectedStatus === 'active') {
-         matchesStatus = project.is_active
-       } else if (selectedStatus === 'archived') {
-         matchesStatus = !project.is_active
-       } else {
-         matchesStatus = project.status === selectedStatus && project.is_active
-       }
-     }
+    let matchesStatus = true
+    if (selectedStatus !== 'all') {
+      if (selectedStatus === 'active') {
+        matchesStatus = project.is_active
+      } else if (selectedStatus === 'archived') {
+        matchesStatus = !project.is_active
+      } else {
+        matchesStatus = project.status === selectedStatus && project.is_active
+      }
+    }
 
-     return matchesText && matchesClient && matchesStatus
-   })
+    return matchesText && matchesClient && matchesStatus
+  })
 
-   // Delete project handlers
-   const handleDeleteClick = (id: string) => {
-     setDeleteProjectId(id)
-     setDeleteModalOpen(true)
-   }
+  // Delete project handlers
+  const handleDeleteClick = (id: string) => {
+    setDeleteProjectId(id)
+    setDeleteModalOpen(true)
+  }
 
-   const handleDeleteConfirm = async () => {
-     if (!deleteProjectId) return
-     
-     setDeleteLoading(true)
-     try {
-       const supabase = createClient()
-       const { data: { user } } = await supabase.auth.getUser()
-       
-       if (!user) {
-         throw new Error('Usuário não autenticado')
-       }
+  const handleDeleteConfirm = async () => {
+    if (!deleteProjectId) return
 
-       // Call the delete API route
-       const response = await fetch(`/api/projects/${deleteProjectId}`, {
-         method: 'DELETE',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-       })
+    setDeleteLoading(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-       if (!response.ok) {
-         const errorData = await response.json()
-         throw new Error(errorData.error || 'Erro ao excluir projeto')
-       }
+      if (!user) {
+        throw new Error('Usuário não autenticado')
+      }
 
-       // Remove project from local state
-       setProjects(prev => prev.filter(project => project.id !== deleteProjectId))
-       
-       // Close modal and reset
-       setDeleteModalOpen(false)
-       setDeleteProjectId(null)
-       setDeleteLoading(false)
-     } catch (error: any) {
-       console.error('Erro ao excluir projeto:', error)
-       setDeleteLoading(false)
-       alert(error.message || 'Erro ao excluir projeto. Tente novamente.')
-     }
-   }
+      // Call the delete API route
+      const response = await fetch(`/api/projects/${deleteProjectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-   const handleDeleteCancel = () => {
-     setDeleteModalOpen(false)
-     setDeleteProjectId(null)
-     setDeleteLoading(false)
-   }
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao excluir projeto')
+      }
 
-   if (loading) {
-     return (
-       <div className="flex items-center justify-center h-64">
-         <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
-       </div>
-     )
-   }
+      // Remove project from local state
+      setProjects(prev => prev.filter(project => project.id !== deleteProjectId))
 
+      // Close modal and reset
+      setDeleteModalOpen(false)
+      setDeleteProjectId(null)
+      setDeleteLoading(false)
+    } catch (error: any) {
+      console.error('Erro ao excluir projeto:', error)
+      setDeleteLoading(false)
+      alert(error.message || 'Erro ao excluir projeto. Tente novamente.')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false)
+    setDeleteProjectId(null)
+    setDeleteLoading(false)
+  }
+
+  if (loading) {
     return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-pulse font-headline text-xl text-on-surface-variant">Carregando projetos...</div>
+      </div>
+    )
+  }
+
+  return (
     <>
       <section className="mb-8 lg:mb-12">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -227,9 +227,9 @@ export default function ProjectsPage() {
           {/* Busca por texto */}
           <div className="flex-1 relative bg-surface-container rounded-lg px-4 py-2.5 flex items-center border border-outline-variant/10">
             <Search className="text-outline w-5 h-5 shrink-0" />
-            <input 
-              className="bg-transparent border-none focus:ring-0 text-sm font-body w-full placeholder:text-outline-variant ml-2 outline-none" 
-              placeholder="Buscar por nome ou endereço do projeto..." 
+            <input
+              className="bg-transparent border-none focus:ring-0 text-sm font-body w-full placeholder:text-outline-variant ml-2 outline-none"
+              placeholder="Buscar por nome ou endereço do projeto..."
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -307,14 +307,14 @@ export default function ProjectsPage() {
               finalizando: 'bg-secondary-fixed-dim/80',
               critico: 'bg-error-container/80',
             }
-            
+
             const gradientColors: Record<string, string> = {
               emprogresso: 'from-primary/80 to-secondary/60',
               planejamento: 'from-tertiary/80 to-tertiary-container/60',
               finalizando: 'from-secondary-fixed/80 to-secondary-fixed-dim/60',
               critico: 'from-error/80 to-error-container/60',
             }
-            
+
             return (
               <Link key={project.id} href={`/dashboard/projects/${project.id}`} className="group cursor-pointer animate-fade-in-up" style={{ animationDelay: `${idx * 60}ms` }}>
                 <div className={`relative h-48 lg:h-72 mb-4 lg:mb-6 overflow-hidden rounded-xl bg-gradient-to-br ${gradientColors[project.status]} transition-all duration-300 group-hover:shadow-lift group-hover:-translate-y-1`}>
@@ -373,7 +373,8 @@ export default function ProjectsPage() {
                     </div>
                     <div className="w-full bg-surface-container-highest h-[3px] lg:h-[4px] overflow-hidden">
                       <div className="bg-primary h-full" style={{ width: `${project.progress}%` }}></div>
-                 </div>
+                    </div>
+                  </div>
                 </div>
                 {/* Delete button */}
                 <button
@@ -391,20 +392,20 @@ export default function ProjectsPage() {
               </Link>
             )
           })}
-         </section>
-       )}
-       {/* Delete Confirmation Modal */}
-       <ConfirmModal
-         isOpen={deleteModalOpen}
-         onClose={handleDeleteCancel}
-         onConfirm={handleDeleteConfirm}
-         title="Excluir Projeto"
-         description="Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita."
-         confirmText="Excluir"
-         cancelText="Cancelar"
-         isLoading={deleteLoading}
-         variant="destructive"
-       />
-     </>
-   )
- }
+        </section>
+      )}
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Projeto"
+        description="Tem certeza que deseja excluir este projeto? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        isLoading={deleteLoading}
+        variant="destructive"
+      />
+    </>
+  )
+}
