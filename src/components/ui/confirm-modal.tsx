@@ -27,9 +27,9 @@ export default function ConfirmModal({
   isLoading = false,
   variant = 'destructive'
 }: ConfirmModalProps) {
-  if (!isOpen) return null
-
   const [modalError, setModalError] = useState('')
+
+  if (!isOpen) return null
 
   const handleConfirm = async () => {
     setModalError('')
@@ -78,6 +78,7 @@ export default function ConfirmModal({
             <Button 
               type="submit"
               disabled={isLoading}
+              onClick={handleConfirm}
               className={`flex-1 h-11 ${variant === 'destructive' ? 'bg-error text-error-foreground' : variant === 'warning' ? 'bg-warning text-warning-foreground' : 'bg-primary text-primary-foreground'} font-bold tracking-widest uppercase text-[10px]`}
             >
               {isLoading ? 'Processando...' : confirmText}
