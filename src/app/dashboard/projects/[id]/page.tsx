@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Camera, Edit, Share2, Upload, X, Image as ImageIcon, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Timeline } from '@/components/timeline'
@@ -19,6 +19,7 @@ interface ProjectDetails extends Project {
 
 export default function ProjectPage() {
   const params = useParams()
+  const router = useRouter()
   const projectId = params.id as string
   const fileInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
@@ -120,7 +121,7 @@ export default function ProjectPage() {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (!user) {
         throw new Error('Usuário não autenticado')
       }
@@ -398,7 +399,7 @@ export default function ProjectPage() {
   if (!project) {
     return (
       <div className="rounded-lg bg-error-container p-6 text-sm text-on-error-container">
-        {error || 'Projeto nao encontrado.'}
+        {error || 'Projeto não encontrado.'}
       </div>
     )
   }
